@@ -23,3 +23,9 @@ mocExecution(({tick}) => {
   }  
 })
 ```
+
+Check the [API documentation](./docs/api.md)
+
+## Install
+
+`npm i micmac`
