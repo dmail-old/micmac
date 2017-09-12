@@ -11,9 +11,7 @@ import {mockExecution} from 'micmac'
 
 mocExecution(({tick}) => {
   let called = false
-  setTimeout(() => {
-    called = true
-  }, 10)
+  setTimeout(() => { called = true }, 10)
   if (called) {
     throw new Error('should not be called')
   }
