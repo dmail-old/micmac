@@ -1,5 +1,67 @@
 {
-  "name": "micmac",
-  "version": "0.0.1",
-  "licence": "MIT"
+	"name": "micmac",
+	"version": "1.0.0",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/dmail/micmac"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"main": "dist/index.js",
+	"module": "index.js",
+	"files": [
+		"dist",
+		"src"
+	],
+	"engines": {
+		"node": ">=8.6.0"
+	},
+	"dependencies": {
+		"@dmail/signal": "0.0.1",
+		"big-js": "3.1.3"
+	},
+	"devDependencies": {
+		"@dmail/command": "0.1.1",
+		"@dmail/prettiest": "0.2.1",
+		"@dmail/shared-config": "1.1.1",
+		"@dmail/test": "2.2.0",
+		"babel-cli": "7.0.0-beta.0",
+		"babel-core": "7.0.0-beta.0",
+		"babel-eslint": "8.0.0",
+		"babel-preset-env": "2.0.0-beta.0",
+		"codecov": "2.3.0",
+		"eslint": "3.19.0",
+		"eslint-plugin-import": "2.6.0",
+		"nyc": "11.2.1",
+		"prettier": "1.7.0",
+		"rimraf": "2.6.2"
+	},
+	"scripts": {
+		"code-compile": "babel . --out-dir dist --ignore=node_modules,dist --source-maps",
+		"code-clean": "rimraf dist",
+		"code-build": "npm run code-clean && npm run code-compile",
+		"code-watch": "babel . --watch --out-dir dist --ignore=node_modules,dist --source-maps",
+		"code-lint": "eslint .",
+		"code-format": "prettiest",
+		"code-list": "prettiest-list",
+		"test-before": "npm run code-lint && npm run code-format && npm run code-compile",
+		"test-list": "test-list",
+		"test-run": "test-run",
+		"test": "npm run test-before && npm run test-run",
+		"test-cover": "npm run test-before && nyc npm run test-run",
+		"test-cover-clean": "rimraf .nyc_output && rimraf coverage && rimraf coverage.lcov",
+		"test-cover-html": "nyc report --reporter=lcov",
+		"test-cover-text": "nyc report --reporter=text-summary",
+		"test-cover-table": "nyc report --reporter=text",
+		"test-cover-lcov": "nyc report --reporter=text-lcov > coverage.lcov",
+		"test-cover-upload": "codecov --token=f6dbc6c1-248c-4df0-987c-d89a182bef7f",
+		"repo-reset": "npm run code-clean && npm run test-cover-clean && rimraf node_modules",
+		"repo-reinstall": "npm run repo-reset && npm install",
+		"build": "npm run code-build",
+		"compile": "npm run code-compile",
+		"prepublishOnly": "npm run code-build",
+		"reinstall": "npm run repo-reinstall"
+	}
 }

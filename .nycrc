@@ -1,0 +1,21 @@
+{
+  "include": [
+    "dist/index.js",
+    "dist/**"
+  ],
+  "exclude": [
+    "dist/**/*.test.*"
+  ],
+  "extension": [
+    ".jsx"
+  ],
+  "reporter": [
+    "lcov"
+  ],
+  "check-coverage": false,
+  "per-file": true,
+  "lines": 99,
+  "statements": 99,
+  "functions": 99,
+  "branches": 99
+}
