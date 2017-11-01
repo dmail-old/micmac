@@ -19,11 +19,12 @@
 		"node": ">=8.6.0"
 	},
 	"dependencies": {
-		"@dmail/signal": "0.0.1",
+		"@dmail/signal": "2.0.1",
 		"big-js": "3.1.3"
 	},
 	"devDependencies": {
 		"@dmail/command": "0.1.1",
+		"@dmail/expect": "2.1.0",
 		"@dmail/prettiest": "0.2.1",
 		"@dmail/shared-config": "1.1.1",
 		"@dmail/test": "2.2.0",
