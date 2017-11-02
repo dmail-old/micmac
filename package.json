@@ -24,7 +24,7 @@
 	},
 	"devDependencies": {
 		"@dmail/command": "0.1.1",
-		"@dmail/expect": "2.2.0",
+		"@dmail/expect": "2.3.0",
 		"@dmail/prettiest": "0.2.1",
 		"@dmail/shared-config": "1.2.1",
 		"@dmail/spy": "1.0.1",

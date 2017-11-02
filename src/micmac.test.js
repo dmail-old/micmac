@@ -7,8 +7,7 @@ import { createTest } from "@dmail/test"
 import { createSpy } from "@dmail/spy"
 import {
 	expectChain,
-	expectExactly,
-	expectDifferent,
+	matchNot,
 	expectMatch,
 	expectCalledOnceWithoutArgument,
 	expectCalledTwiceWithoutArgument,
@@ -19,15 +18,17 @@ import {
 export default createTest({
 	"mockExecution temp overrides global Date constructor": () => {
 		const globalDate = Date
-		return mockExecution(() => expectDifferent(globalDate, Date)).then(() =>
-			expectExactly(globalDate, Date)
+		return expectChain(
+			() => mockExecution(() => expectMatch(globalDate, matchNot(Date))),
+			() => expectMatch(globalDate, Date)
 		)
 	},
 	"Date.now() and new Date().getTime() returns fake amount of ms": () =>
 		mockExecution(({ tick }) => {
 			const ms = Date.now()
-			tick(10)
 			return expectChain(
+				() => expectMatch(Date.now(), ms),
+				() => tick(10),
 				() => expectMatch(Date.now(), ms + 10),
 				() => expectMatch(new Date().getTime(), ms + 10),
 				() => expectMatch(new Date("1 January 1970 00:00:00 UTC").getTime(), 0)
