@@ -24,9 +24,10 @@
 	},
 	"devDependencies": {
 		"@dmail/command": "0.1.1",
-		"@dmail/expect": "2.1.0",
+		"@dmail/expect": "2.2.0",
 		"@dmail/prettiest": "0.2.1",
-		"@dmail/shared-config": "1.1.1",
+		"@dmail/shared-config": "1.2.1",
+		"@dmail/spy": "1.0.1",
 		"@dmail/test": "2.2.0",
 		"babel-cli": "7.0.0-beta.0",
 		"babel-core": "7.0.0-beta.0",

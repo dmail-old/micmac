@@ -3,6 +3,7 @@ import { createExecutionHooks } from "./createExecutionHooks.js"
 import { createSpy } from "@dmail/spy"
 import { createTest } from "@dmail/test"
 import {
+	expectChain,
 	expectNotCalled,
 	expectCalledOnceWithoutArgument,
 	expectCalledTwiceWithoutArgument,
@@ -10,31 +11,36 @@ import {
 } from "@dmail/expect"
 
 export default createTest({
-	"setMacro registers a function called when macro is called"() {
+	"setMacro registers a function called when macro is called": () => {
 		const { macro, listenMacro } = createExecutionController()
 		const { setMacro } = createExecutionHooks({ listenMacro })
 		const spy = createSpy()
 
 		setMacro(spy)
-		expectNotCalled(spy)
-		macro()
-		expectCalledOnceWithoutArgument(spy)
-		macro()
-		expectCalledOnceWithoutArgument(spy) // ensure it's removed after being called
+		return expectChain(
+			() => expectNotCalled(spy),
+			() => macro(),
+			() => expectCalledOnceWithoutArgument(spy),
+			() => macro(),
+			// ensure it's removed after being called
+			() => expectCalledOnceWithoutArgument(spy)
+		)
 	},
-	"setMacro called during execution registered on next macro"() {
+	"setMacro called during execution registered on next macro": () => {
 		const { macro, listenMacro } = createExecutionController()
 		const { setMacro } = createExecutionHooks({ listenMacro })
 		const spy = createSpy(() => setMacro(spy))
 
 		setMacro(spy)
-		expectNotCalled(spy)
-		macro()
-		expectCalledOnceWithoutArgument(spy)
-		macro()
-		expectCalledTwiceWithoutArgument(spy)
+		return expectChain(
+			() => expectNotCalled(spy),
+			() => macro(),
+			() => expectCalledOnceWithoutArgument(spy),
+			() => macro(),
+			() => expectCalledTwiceWithoutArgument(spy)
+		)
 	},
-	"setMacro returns a function cancelling execution"() {
+	"setMacro returns a function cancelling execution": () => {
 		const { macro, listenMacro } = createExecutionController()
 		const { setMacro } = createExecutionHooks({ listenMacro })
 		const spy = createSpy()
@@ -42,19 +48,21 @@ export default createTest({
 		const cancel = setMacro(spy)
 		cancel()
 		macro()
-		expectNotCalled(spy)
+		return expectNotCalled(spy)
 	},
-	"setMicro registers a function called when micro is called"() {
+	"setMicro registers a function called when micro is called": () => {
 		const { micro, listenMicro } = createExecutionController()
 		const { setMicro } = createExecutionHooks({ listenMicro })
 		const spy = createSpy()
 
-		setMicro(spy)
-		expectNotCalled(spy)
-		micro()
-		expectCalledOnceWithoutArgument(spy)
+		return expectChain(
+			() => setMicro(spy),
+			() => expectNotCalled(spy),
+			() => micro(),
+			() => expectCalledOnceWithoutArgument(spy)
+		)
 	},
-	"setMicro called during execution are executed at the end of current micros"() {
+	"setMicro called during execution are executed at the end of current micros": () => {
 		const { micro, listenMicro } = createExecutionController()
 		const { setMicro } = createExecutionHooks({ listenMicro })
 		const secondSpy = createSpy()
@@ -64,9 +72,9 @@ export default createTest({
 		setMicro(firstSpy)
 		setMicro(secondSpy)
 		micro()
-		expectCalledInOrder(firstSpy, secondSpy, thirdSpy)
+		return expectCalledInOrder(firstSpy, secondSpy, thirdSpy)
 	},
-	"micros auto called after macros"() {
+	"micros auto called after macros": () => {
 		const { listenMicro, macro, listenMacro } = createExecutionController()
 		const { setMicro, setMacro } = createExecutionHooks({ listenMicro, listenMacro })
 		const microSpy = createSpy()
@@ -75,59 +83,65 @@ export default createTest({
 		setMicro(microSpy)
 		setMacro(macroSpy)
 		macro()
-		expectCalledInOrder(macroSpy, microSpy)
+		return expectCalledInOrder(macroSpy, microSpy)
 	},
-	"delay immediatly calls when delayed by zero"() {
+	"delay immediatly calls when delayed by zero": () => {
 		const { tick, listenMacro } = createExecutionController()
 		const { delay } = createExecutionHooks({ listenMacro })
 		const spy = createSpy()
 
 		delay(spy)
-		expectNotCalled(spy)
-		tick()
-		expectCalledOnceWithoutArgument(spy)
+		return expectChain(
+			() => expectNotCalled(spy),
+			() => tick(),
+			() => expectCalledOnceWithoutArgument(spy)
+		)
 	},
-	"ensure late delayed function are called"() {
+	"ensure late delayed function are called": () => {
 		const { tick, listenMacro } = createExecutionController()
 		const { delay } = createExecutionHooks({ listenMacro })
 		const spy = createSpy()
 
 		delay(spy, 10)
 		tick(20)
-		expectCalledOnceWithoutArgument(spy)
+		return expectCalledOnceWithoutArgument(spy)
 	},
-	"can cancel delayed function"() {
+	"can cancel delayed function": () => {
 		const { tick, listenMacro } = createExecutionController()
 		const { delay } = createExecutionHooks({ listenMacro })
 		const spy = createSpy()
 		const cancel = delay(spy)
 		cancel()
 		tick()
-		expectNotCalled(spy)
+		return expectNotCalled(spy)
 	},
-	"delayRecursive auto delay same function in next ideal delayed ms"() {
+	"delayRecursive auto delay same function in next ideal delayed ms": () => {
 		const { tick, listenMacro } = createExecutionController()
 		const { delayRecursive } = createExecutionHooks({ listenMacro })
 		const spy = createSpy()
 		delayRecursive(spy)
 		tick()
-		expectCalledOnceWithoutArgument(spy)
-		tick()
-		expectCalledTwiceWithoutArgument(spy)
+		return expectChain(
+			() => expectCalledOnceWithoutArgument(spy),
+			() => tick(),
+			() => expectCalledTwiceWithoutArgument(spy)
+		)
 	},
-	"delayRecursive tries to respect intervalMs"() {
+	"delayRecursive tries to respect intervalMs": () => {
 		const { tick, listenMacro } = createExecutionController()
 		const { delayRecursive } = createExecutionHooks({ listenMacro })
 		const spy = createSpy()
 		delayRecursive(spy, 10)
 		tick(33)
-		expectCalledOnceWithoutArgument(spy)
-		tick(6)
-		expectCalledOnceWithoutArgument(spy)
-		tick(1)
-		expectCalledTwiceWithoutArgument(spy)
+		return expectChain(
+			() => expectCalledOnceWithoutArgument(spy),
+			() => tick(6),
+			() => expectCalledOnceWithoutArgument(spy),
+			() => tick(1),
+			() => expectCalledTwiceWithoutArgument(spy)
+		)
 	},
-	"delayRecursive cancelled inside function prevent recursive delay"() {
+	"delayRecursive cancelled inside function prevent recursive delay": () => {
 		const { tick, listenMacro } = createExecutionController()
 		const { delayRecursive } = createExecutionHooks({ listenMacro })
 		let cancel
@@ -140,16 +154,20 @@ export default createTest({
 		tick()
 		expectCalledOnceWithoutArgument(spy)
 	},
-	"delayRecursive cancelled outside before next tick prevent recursive"() {
+	"delayRecursive cancelled outside before next tick prevent recursive": () => {
 		const { tick, listenMacro } = createExecutionController()
 		const { delayRecursive } = createExecutionHooks({ listenMacro })
 		const spy = createSpy()
 		const cancel = delayRecursive(spy)
 
 		tick()
-		expectCalledOnceWithoutArgument(spy)
-		cancel()
-		tick()
-		expectCalledOnceWithoutArgument(spy)
+		return expectChain(
+			() => expectCalledOnceWithoutArgument(spy),
+			() => {
+				cancel()
+				tick()
+			},
+			() => expectCalledOnceWithoutArgument(spy)
+		)
 	}
 })

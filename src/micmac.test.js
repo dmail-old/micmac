@@ -6,14 +6,13 @@ import { sum } from "./nano.js"
 import { createTest } from "@dmail/test"
 import { createSpy } from "@dmail/spy"
 import {
+	expectChain,
 	expectExactly,
 	expectDifferent,
 	expectMatch,
-	expectProperties,
 	expectCalledOnceWithoutArgument,
 	expectCalledTwiceWithoutArgument,
 	expectCalledOnceWith,
-	expectCalledBy,
 	expectNotCalled
 } from "@dmail/expect"
 
@@ -28,10 +27,10 @@ export default createTest({
 		mockExecution(({ tick }) => {
 			const ms = Date.now()
 			tick(10)
-			return expectMatch(Date.now(), ms + 10).then(() =>
-				expectMatch(new Date().getTime(), ms + 10).then(() =>
-					expectMatch(new Date("1 January 1970 00:00:00 UTC").getTime(), 0)
-				)
+			return expectChain(
+				() => expectMatch(Date.now(), ms + 10),
+				() => expectMatch(new Date().getTime(), ms + 10),
+				() => expectMatch(new Date("1 January 1970 00:00:00 UTC").getTime(), 0)
 			)
 		}),
 	"process.uptime": () =>
@@ -53,26 +52,30 @@ export default createTest({
 			const expectedSeconds = sum(seconds, addedMs / 1000)
 			const expectedNanoseconds = nanoseconds + addedNs
 
-			return expectProperties(
-				{ seconds: actualSeconds, nanoseconds: actualNanoseconds },
-				{
-					seconds: expectedSeconds,
-					nanoseconds: expectedNanoseconds
-				}
+			return expectChain(
+				() => expectMatch(actualSeconds, expectedSeconds),
+				() => expectMatch(actualNanoseconds, expectedNanoseconds)
 			)
 		}),
 	"process.nextTick": () =>
 		mockExecution(({ micro }) => {
 			const spy = createSpy()
 			process.nextTick(spy)
-			// todo: expectCalledBy must ensure the second function is calling the spy
-			return expectCalledBy(spy, micro, expectCalledOnceWithoutArgument)
+			return expectChain(
+				() => expectNotCalled(spy),
+				() => micro(),
+				() => expectCalledOnceWithoutArgument(spy)
+			)
 		}),
 	"setImmediate()": () =>
 		mockExecution(({ micro }) => {
 			const spy = createSpy()
 			setImmediate(spy)
-			return expectCalledBy(spy, micro, expectCalledOnceWithoutArgument)
+			return expectChain(
+				() => expectNotCalled(spy),
+				() => micro(),
+				() => expectCalledOnceWithoutArgument(spy)
+			)
 		}),
 	"clearImmediate()": () =>
 		mockExecution(({ micro }) => {
@@ -86,7 +89,11 @@ export default createTest({
 		mockExecution(({ tick }) => {
 			const spy = createSpy()
 			setTimeout(spy)
-			return expectCalledBy(spy, tick)
+			return expectChain(
+				() => expectNotCalled(spy),
+				() => tick(),
+				() => expectCalledOnceWithoutArgument(spy)
+			)
 		}),
 	"clearTimeout cancels a timeout": () =>
 		mockExecution(({ tick }) => {
@@ -100,32 +107,38 @@ export default createTest({
 		mockExecution(({ tick }) => {
 			const spy = createSpy()
 			setInterval(spy, 10)
-			return expectNotCalled(spy).then(() => {
-				tick(10)
-				return expectCalledOnceWithoutArgument(spy).then(() => {
-					tick(10)
-					return expectCalledTwiceWithoutArgument(spy)
-				})
-			})
+			return expectChain(
+				() => expectNotCalled(spy),
+				() => tick(10),
+				() => expectCalledOnceWithoutArgument(spy),
+				() => tick(10),
+				() => expectCalledTwiceWithoutArgument(spy)
+			)
 		}),
 	"clearInterval()": () =>
 		mockExecution(({ tick }) => {
 			const spy = createSpy()
 			const id = setInterval(spy, 10)
-			return expectCalledBy(spy, () => tick(10)).then(() => {
-				clearInterval(id)
-				tick(10)
-				return expectCalledOnceWithoutArgument(spy)
-			})
+			return expectChain(
+				() => expectNotCalled(spy),
+				() => tick(10),
+				() => expectCalledOnceWithoutArgument(spy),
+				() => {
+					clearInterval(id)
+					tick(10)
+				},
+				() => expectCalledOnceWithoutArgument(spy)
+			)
 		}),
 	"calling micro calls promise onFullfill": () =>
 		mockExecution(({ micro }) => {
 			const spy = createSpy()
 			Promise.resolve().then(spy)
-			return expectNotCalled(spy).then(() => {
-				micro()
-				return expectCalledOnceWith(spy, undefined)
-			})
+			return expectChain(
+				() => expectNotCalled(spy),
+				() => micro(),
+				() => expectCalledOnceWith(spy, undefined)
+			)
 		}),
 	"example with time dependent nested promise": () =>
 		mockExecution(({ tick }) => {
@@ -139,16 +152,14 @@ export default createTest({
 			const expectFulfilled = (...args) => args.forEach(arg => expectMatch(arg.status, "fulfilled"))
 			const expectResolved = (...args) => args.forEach(arg => expectMatch(arg.status, "resolved"))
 
-			return expectPending(nestedPromise, outerPromise)
-				.then(() => expectResolved(innerPromise))
-				.then(() => {
-					tick(10)
-					return expectFulfilled(nestedPromise, innerPromise).then(() =>
-						expectPending(outerPromise).then(() => {
-							tick(20)
-							return expectFulfilled(nestedPromise, innerPromise, outerPromise)
-						})
-					)
-				})
+			return expectChain(
+				() => expectPending(nestedPromise, outerPromise),
+				() => expectResolved(innerPromise),
+				() => tick(10),
+				() => expectFulfilled(nestedPromise, innerPromise),
+				() => expectPending(outerPromise),
+				() => tick(20),
+				() => expectFulfilled(nestedPromise, innerPromise, outerPromise)
+			)
 		})
 })

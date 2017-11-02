@@ -5,7 +5,6 @@
 // http://voidcanvas.com/setimmediate-vs-nexttick-vs-settimeout/
 // https://jakearchibald.com/2015/tasks-microtasks-queues-and-schedules/
 
-import { createPropertyMethods } from "../util/index.js"
 import { createExecutionController } from "./createExecutionController.js"
 import { createExecutionHooks } from "./createExecutionHooks.js"
 import { createFakePromise } from "./FakePromise.js"
@@ -19,6 +18,29 @@ const composeFunctionAndReturnedFunctions = (...fns) => (...args) => {
 	const returnedFns = fns.map(fn => fn(...args))
 	return () => {
 		returnedFns.forEach(returnedFn => returnedFn())
+	}
+}
+const createPropertyHelpers = object => {
+	const hasProperty = name => object.hasOwnProperty(name)
+	const getProperty = name => object[name]
+	const setProperty = (name, value) => {
+		const has = hasProperty(name)
+		const old = has ? getProperty(name) : undefined
+		object[name] = value
+		const restoreProperty = () => {
+			if (has) {
+				object[name] = old
+			} else {
+				delete object[name]
+			}
+		}
+		return restoreProperty
+	}
+
+	return {
+		has: hasProperty,
+		get: getProperty,
+		set: setProperty
 	}
 }
 const createFakeInstaller = installer => {
@@ -72,7 +94,7 @@ const createFakeInstaller = installer => {
 				throw new Error("one name expected")
 			}
 			let i = 0
-			let { has, get, set } = createPropertyMethods(object)
+			let { has, get, set } = createPropertyHelpers(object)
 			let name
 			while (i < names.length) {
 				name = names[i]
@@ -81,7 +103,7 @@ const createFakeInstaller = installer => {
 				} else if (i === names.length - 1) {
 					break
 				}
-				;({ has, get, set } = createPropertyMethods(get(name)))
+				;({ has, get, set } = createPropertyHelpers(get(name)))
 				i++
 			}
 			return {
@@ -318,7 +340,7 @@ const installFakeHooks = composeFunctionAndReturnedFunctions(
 	installFakePerformanceNow
 )
 
-/*x
+/*
 note about helper below : do not try/catch fn(ticker) in order to be sure uninstall() gets called
 because when fn throws your application is into an unexpected state, let your app crash
 -> in fact I use try finally because it's very important to uninstall setTimeout and stuff like that
