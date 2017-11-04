@@ -63,10 +63,9 @@ const createFakeInstaller = installer => {
 			addRestorer(where.set(where.name, fake))
 			if (get) {
 				const initialNano = get()
-				let nano = initialNano
-				executionController.listenMicro(fakeNano => {
-					nano = initialNano.add(fakeNano)
-					set(nano)
+				executionController.setNanoReference(initialNano)
+				executionController.listenNano(() => {
+					set(executionController.getNano())
 				})
 				addRestorer(() => set(initialNano))
 			}

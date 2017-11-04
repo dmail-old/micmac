@@ -1,6 +1,6 @@
 import { createNano } from "./nano.js"
 
-export const createExecutionHooks = ({ listenMacro, listenMicro }) => {
+export const createExecutionHooks = ({ listenMacro, listenMicro, getNano }) => {
 	const hooks = {}
 
 	if (listenMacro) {
@@ -81,7 +81,8 @@ export const createExecutionHooks = ({ listenMacro, listenMicro }) => {
 			}
 		}
 
-		listenMacro(fakeNano => {
+		listenMacro(() => {
+			const fakeNano = getNano()
 			ellapsedMs = fakeNano.substract(nano).toMilliseconds()
 			nano = fakeNano
 			runMacros()

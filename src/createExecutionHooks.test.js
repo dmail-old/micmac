@@ -13,8 +13,8 @@ import {
 
 export default createTest({
 	"setMacro registers a function called when macro is called": () => {
-		const { macro, listenMacro } = createExecutionController()
-		const { setMacro } = createExecutionHooks({ listenMacro })
+		const { macro, listenMacro, getNano } = createExecutionController()
+		const { setMacro } = createExecutionHooks({ listenMacro, getNano })
 		const spy = createSpy()
 
 		setMacro(spy)
@@ -28,8 +28,8 @@ export default createTest({
 		)
 	},
 	"setMacro called during execution registered on next macro": () => {
-		const { macro, listenMacro } = createExecutionController()
-		const { setMacro } = createExecutionHooks({ listenMacro })
+		const { macro, listenMacro, getNano } = createExecutionController()
+		const { setMacro } = createExecutionHooks({ listenMacro, getNano })
 		const spy = createSpy(() => setMacro(spy))
 
 		setMacro(spy)
@@ -42,8 +42,8 @@ export default createTest({
 		)
 	},
 	"setMacro returns a function cancelling registration": () => {
-		const { macro, listenMacro } = createExecutionController()
-		const { setMacro } = createExecutionHooks({ listenMacro })
+		const { macro, listenMacro, getNano } = createExecutionController()
+		const { setMacro } = createExecutionHooks({ listenMacro, getNano })
 		const spy = createSpy()
 
 		const cancel = setMacro(spy)
@@ -52,8 +52,8 @@ export default createTest({
 		return expectNotCalled(spy)
 	},
 	"setMicro registers a function called when micro is called": () => {
-		const { micro, listenMicro } = createExecutionController()
-		const { setMicro } = createExecutionHooks({ listenMicro })
+		const { micro, listenMicro, getNano } = createExecutionController()
+		const { setMicro } = createExecutionHooks({ listenMicro, getNano })
 		const spy = createSpy()
 
 		return expectChain(
@@ -64,8 +64,8 @@ export default createTest({
 		)
 	},
 	"setMicro called during execution are executed at the end of current micros": () => {
-		const { micro, listenMicro } = createExecutionController()
-		const { setMicro } = createExecutionHooks({ listenMicro })
+		const { micro, listenMicro, getNano } = createExecutionController()
+		const { setMicro } = createExecutionHooks({ listenMicro, getNano })
 		const secondSpy = createSpy()
 		const thirdSpy = createSpy()
 		const firstSpy = createSpy(() => setMicro(thirdSpy))
@@ -76,8 +76,8 @@ export default createTest({
 		return expectCalledInOrder(firstSpy, secondSpy, thirdSpy)
 	},
 	"setMicro forward args": () => {
-		const { micro, listenMicro } = createExecutionController()
-		const { setMicro } = createExecutionHooks({ listenMicro })
+		const { micro, listenMicro, getNano } = createExecutionController()
+		const { setMicro } = createExecutionHooks({ listenMicro, getNano })
 		const spy = createSpy()
 		const args = [0, 1]
 		setMicro(spy, ...args)
@@ -85,8 +85,8 @@ export default createTest({
 		return expectCalledOnceWith(spy, ...args)
 	},
 	"micros auto called after macros": () => {
-		const { listenMicro, macro, listenMacro } = createExecutionController()
-		const { setMicro, setMacro } = createExecutionHooks({ listenMicro, listenMacro })
+		const { listenMicro, macro, listenMacro, getNano } = createExecutionController()
+		const { setMicro, setMacro } = createExecutionHooks({ listenMicro, listenMacro, getNano })
 		const microSpy = createSpy()
 		const macroSpy = createSpy()
 
@@ -96,8 +96,8 @@ export default createTest({
 		return expectCalledInOrder(macroSpy, microSpy)
 	},
 	"delay immediatly calls when delayed by zero": () => {
-		const { tick, listenMacro } = createExecutionController()
-		const { delay } = createExecutionHooks({ listenMacro })
+		const { tick, listenMacro, getNano } = createExecutionController()
+		const { delay } = createExecutionHooks({ listenMacro, getNano })
 		const spy = createSpy()
 
 		delay(spy)
@@ -108,8 +108,8 @@ export default createTest({
 		)
 	},
 	"ensure late delayed function are called": () => {
-		const { tick, listenMacro } = createExecutionController()
-		const { delay } = createExecutionHooks({ listenMacro })
+		const { tick, listenMacro, getNano } = createExecutionController()
+		const { delay } = createExecutionHooks({ listenMacro, getNano })
 		const spy = createSpy()
 
 		delay(spy, 10)
@@ -117,8 +117,8 @@ export default createTest({
 		return expectCalledOnceWithoutArgument(spy)
 	},
 	"can cancel delayed function": () => {
-		const { tick, listenMacro } = createExecutionController()
-		const { delay } = createExecutionHooks({ listenMacro })
+		const { tick, listenMacro, getNano } = createExecutionController()
+		const { delay } = createExecutionHooks({ listenMacro, getNano })
 		const spy = createSpy()
 		const cancel = delay(spy)
 		cancel()
@@ -126,8 +126,8 @@ export default createTest({
 		return expectNotCalled(spy)
 	},
 	"delayRecursive auto delay same function in next ideal delayed ms": () => {
-		const { tick, listenMacro } = createExecutionController()
-		const { delayRecursive } = createExecutionHooks({ listenMacro })
+		const { tick, listenMacro, getNano } = createExecutionController()
+		const { delayRecursive } = createExecutionHooks({ listenMacro, getNano })
 		const spy = createSpy()
 		delayRecursive(spy)
 
@@ -140,8 +140,8 @@ export default createTest({
 		)
 	},
 	"delayRecursive forward args": () => {
-		const { macro, listenMacro } = createExecutionController()
-		const { delayRecursive } = createExecutionHooks({ listenMacro })
+		const { macro, listenMacro, getNano } = createExecutionController()
+		const { delayRecursive } = createExecutionHooks({ listenMacro, getNano })
 		const spy = createSpy()
 		const args = [0, 1]
 		delayRecursive(spy, 0, ...args)
@@ -153,8 +153,8 @@ export default createTest({
 		)
 	},
 	"delayRecursive tries to respect intervalMs": () => {
-		const { tick, listenMacro } = createExecutionController()
-		const { delayRecursive } = createExecutionHooks({ listenMacro })
+		const { tick, listenMacro, getNano } = createExecutionController()
+		const { delayRecursive } = createExecutionHooks({ listenMacro, getNano })
 		const spy = createSpy()
 		delayRecursive(spy, 10)
 
@@ -169,8 +169,8 @@ export default createTest({
 		)
 	},
 	"delayRecursive cancelled inside function prevent recursive delay": () => {
-		const { tick, listenMacro } = createExecutionController()
-		const { delayRecursive } = createExecutionHooks({ listenMacro })
+		const { tick, listenMacro, getNano } = createExecutionController()
+		const { delayRecursive } = createExecutionHooks({ listenMacro, getNano })
 		let cancel
 		const spy = createSpy(() => {
 			cancel()
@@ -185,8 +185,8 @@ export default createTest({
 		)
 	},
 	"delayRecursive cancelled outside before next tick prevent recursive": () => {
-		const { tick, listenMacro } = createExecutionController()
-		const { delayRecursive } = createExecutionHooks({ listenMacro })
+		const { tick, listenMacro, getNano } = createExecutionController()
+		const { delayRecursive } = createExecutionHooks({ listenMacro, getNano })
 		const spy = createSpy()
 		const cancel = delayRecursive(spy)
 

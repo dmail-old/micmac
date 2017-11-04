@@ -24,7 +24,7 @@ export default createTest({
 		)
 	},
 	"Date.now() and new Date().getTime() returns fake amount of ms": () =>
-		mockExecution(({ tick, tickAbsolute }) => {
+		mockExecution(({ tick, tickRelative, setTimeReference }) => {
 			const ms = Date.now()
 			return expectChain(
 				() => expectMatch(Date.now(), ms),
@@ -32,8 +32,10 @@ export default createTest({
 				() => expectMatch(Date.now(), ms + 10),
 				() => expectMatch(new Date().getTime(), ms + 10),
 				() => expectMatch(new Date("1 January 1970 00:00:00 UTC").getTime(), 0),
-				() => tickAbsolute(20),
-				() => expectMatch(Date.now(), ms + 20)
+				() => tickRelative(10),
+				() => expectMatch(Date.now(), ms + 10),
+				() => setTimeReference(),
+				() => expectMatch(Date.now(), 0)
 			)
 		}),
 	"process.uptime": () =>
