@@ -53,7 +53,7 @@ export const createExecutionHooks = ({ listenMacro, listenMicro }) => {
 			let removedByReturnedHook = false
 			let delayedMacro
 
-			const addRecursiveDelayedMacro = (idealDelay = msInterval) =>
+			const addRecursiveDelayedMacro = ms =>
 				addDelayedMacro(
 					() => {
 						fn(...args)
@@ -65,11 +65,12 @@ export const createExecutionHooks = ({ listenMacro, listenMicro }) => {
 							// si on est appelé à 23s au lieu de 10, on a skip un interval
 							// c'est la tehon mais planifie un appel pour 30s
 							const msExcess = ellapsedMs - msInterval
-							idealDelay = msInterval - msExcess % msInterval
+							const idealDelay = msInterval - msExcess % msInterval
+							ms = idealDelay
 						}
-						delayedMacro = addRecursiveDelayedMacro(idealDelay)
+						delayedMacro = addRecursiveDelayedMacro(ms)
 					},
-					idealDelay,
+					ms,
 					...args
 				)
 			delayedMacro = addRecursiveDelayedMacro(msInterval)

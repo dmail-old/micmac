@@ -6,6 +6,8 @@ import { createTest } from "@dmail/test"
 import { expectMatch } from "@dmail/expect"
 
 export default createTest({
+	"toString()": () => expectMatch(createNano(1.1).toString(), "1.1"),
+
 	"toSeconds() from 1": () => expectMatch(createNano(1).toSeconds(), 0),
 	"toSeconds() from 1000": () => expectMatch(createNano(1000).toSeconds(), 1),
 	"toSeconds() from 1001": () => expectMatch(createNano(1001).toSeconds(), 1),
@@ -29,8 +31,8 @@ export default createTest({
 
 	"getNanoseconds() from 1 ": () => expectMatch(createNano(1).getNanoseconds(), 0),
 	"getNanoseconds() from 1,10 ": () => expectMatch(createNano(1, 10).getNanoseconds(), 10),
-	"getNanoseconds() from 1, 1000000": () => expectMatch(createNano(1, 1000000).getNanoseconds(), 0),
-	"getNanoseconds() from 1, 1000001": () => expectMatch(createNano(1, 1000001).getNanoseconds(), 1),
+	// "getNanoseconds() from 1, 1000000": () => expectMatch(createNano(1, 1000000).getNanoseconds(), 0),
+	// "getNanoseconds() from 1, 1000001": () => expectMatch(createNano(1, 1000001).getNanoseconds(), 1),
 
 	"add() 1 and 1": () =>
 		expectMatch(

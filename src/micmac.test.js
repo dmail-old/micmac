@@ -1,7 +1,7 @@
 // https://github.com/substack/node-mkdirp/issues/129
 
 import { mockExecution } from "./micmac.js"
-import { sum } from "./nano.js"
+import { sum, sub } from "./nano.js"
 
 import { createTest } from "@dmail/test"
 import { createSpy } from "@dmail/spy"
@@ -24,14 +24,16 @@ export default createTest({
 		)
 	},
 	"Date.now() and new Date().getTime() returns fake amount of ms": () =>
-		mockExecution(({ tick }) => {
+		mockExecution(({ tick, tickAbsolute }) => {
 			const ms = Date.now()
 			return expectChain(
 				() => expectMatch(Date.now(), ms),
 				() => tick(10),
 				() => expectMatch(Date.now(), ms + 10),
 				() => expectMatch(new Date().getTime(), ms + 10),
-				() => expectMatch(new Date("1 January 1970 00:00:00 UTC").getTime(), 0)
+				() => expectMatch(new Date("1 January 1970 00:00:00 UTC").getTime(), 0),
+				() => tickAbsolute(20),
+				() => expectMatch(Date.now(), ms + 20)
 			)
 		}),
 	"process.uptime": () =>
@@ -45,27 +47,43 @@ export default createTest({
 		}),
 	"process.hrtime": () =>
 		mockExecution(({ tick }) => {
-			const [seconds, nanoseconds] = process.hrtime()
+			const [initialSeconds, initialNanoseconds] = process.hrtime()
 			const addedMs = 10
 			const addedNs = 20
-			tick(addedMs, addedNs)
-			const [actualSeconds, actualNanoseconds] = process.hrtime()
-			const expectedSeconds = sum(seconds, addedMs / 1000)
-			const expectedNanoseconds = nanoseconds + addedNs
+			const removedSeconds = 20
+			const removedNs = 100
 
 			return expectChain(
-				() => expectMatch(actualSeconds, expectedSeconds),
-				() => expectMatch(actualNanoseconds, expectedNanoseconds)
+				() => tick(addedMs, addedNs),
+				() => process.hrtime(),
+				([seconds, nanoseconds]) => {
+					const expectedSeconds = sum(initialSeconds, addedMs / 1000)
+					const expectedNanoseconds = initialNanoseconds + addedNs
+					return expectChain(
+						() => expectMatch(seconds, expectedSeconds),
+						() => expectMatch(nanoseconds, expectedNanoseconds)
+					)
+				},
+				() => process.hrtime([removedSeconds, removedNs], [initialSeconds, initialNanoseconds]),
+				([seconds, nanoseconds]) => {
+					const expectedSeconds = sub(sum(initialSeconds, addedMs / 1000), removedSeconds)
+					const expectedNanoseconds = initialNanoseconds + addedNs - removedNs
+					return expectChain(
+						() => expectMatch(seconds, expectedSeconds),
+						() => expectMatch(nanoseconds, expectedNanoseconds)
+					)
+				}
 			)
 		}),
 	"process.nextTick": () =>
 		mockExecution(({ micro }) => {
 			const spy = createSpy()
-			process.nextTick(spy)
+			const args = [0, 1]
+			process.nextTick(spy, ...args)
 			return expectChain(
 				() => expectNotCalled(spy),
 				() => micro(),
-				() => expectCalledOnceWithoutArgument(spy)
+				() => expectCalledOnceWith(spy, ...args)
 			)
 		}),
 	"setImmediate()": () =>
@@ -82,9 +100,15 @@ export default createTest({
 		mockExecution(({ micro }) => {
 			const spy = createSpy()
 			const id = setImmediate(spy)
-			clearImmediate(id)
-			micro()
-			return expectNotCalled(spy)
+
+			return expectChain(
+				() => expectMatch(clearImmediate("foo"), undefined),
+				() => {
+					clearImmediate(id)
+					micro()
+				},
+				() => expectNotCalled(spy)
+			)
 		}),
 	"setTimeout function can be trigged using tick": () =>
 		mockExecution(({ tick }) => {
@@ -100,9 +124,14 @@ export default createTest({
 		mockExecution(({ tick }) => {
 			const spy = createSpy()
 			const id = setTimeout(spy)
-			clearTimeout(id)
-			tick()
-			return expectNotCalled(spy)
+			return expectChain(
+				() => expectMatch(clearTimeout("foo"), undefined),
+				() => {
+					clearTimeout(id)
+					tick()
+				},
+				() => expectNotCalled(spy)
+			)
 		}),
 	"setInterval()": () =>
 		mockExecution(({ tick }) => {
@@ -124,6 +153,7 @@ export default createTest({
 				() => expectNotCalled(spy),
 				() => tick(10),
 				() => expectCalledOnceWithoutArgument(spy),
+				() => expectMatch(clearInterval("foo"), undefined),
 				() => {
 					clearInterval(id)
 					tick(10)

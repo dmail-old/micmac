@@ -48,7 +48,7 @@ const createFakeInstaller = installer => {
 
 	return ({ object, executionController }) => {
 		if (installed) {
-			throw new Error("fakeTimerHooks already installed")
+			throw new Error("already installed")
 		}
 		installed = true
 		let restore = () => {
@@ -65,7 +65,7 @@ const createFakeInstaller = installer => {
 				const initialNano = get()
 				let nano = initialNano
 				executionController.listenMicro(fakeNano => {
-					nano = nano.add(fakeNano)
+					nano = initialNano.add(fakeNano)
 					set(nano)
 				})
 				addRestorer(() => set(initialNano))

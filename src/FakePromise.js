@@ -161,6 +161,8 @@ export const createFakePromise = () => {
 				rejectPromise(fakePromise, e)
 			}
 		}
+
+		return fakePromise
 	}
 
 	FakePromise.prototype = {
@@ -169,10 +171,10 @@ export const createFakePromise = () => {
 		handled: false,
 		toString: () => "[object FakePromise]",
 		then: function(onFulfill = null, onReject = null) {
-			if (onFulfill && typeof onFulfill !== "function") {
+			if (onFulfill !== null && typeof onFulfill !== "function") {
 				throw new TypeError(`then first arg must be a function ${onFulfill} given`)
 			}
-			if (onReject && typeof onReject !== "function") {
+			if (onReject !== null && typeof onReject !== "function") {
 				throw new TypeError(`then second arg must be a function ${onReject} given`)
 			}
 

@@ -1,7 +1,7 @@
 // http://mikemcl.github.io/big.js/
 import Big from "big-js"
 
-const NANOSECOND_PER_MILLISECOND = 1000000
+// const NANOSECOND_PER_MILLISECOND = 1000000
 const MILLISECOND_PER_SECOND = 1000
 
 export const createNano = (ms = 0, nanoseconds = 0) => {
@@ -9,36 +9,36 @@ export const createNano = (ms = 0, nanoseconds = 0) => {
 	// because nanoseconds is the most atomic time unit so float makes no sense
 	nanoseconds = parseInt(nanoseconds)
 
-	if (nanoseconds > 0) {
-		while (nanoseconds >= NANOSECOND_PER_MILLISECOND) {
-			nanoseconds -= NANOSECOND_PER_MILLISECOND
-			ms++
-		}
-	} else if (nanoseconds < 0) {
-		while (nanoseconds < 0) {
-			nanoseconds += NANOSECOND_PER_MILLISECOND
-			ms--
-		}
-	}
+	// if (nanoseconds > 0) {
+	// 	while (nanoseconds >= NANOSECOND_PER_MILLISECOND) {
+	// 		nanoseconds -= NANOSECOND_PER_MILLISECOND
+	// 		ms++
+	// 	}
+	// } else if (nanoseconds < 0) {
+	// 	while (nanoseconds < 0) {
+	// 		nanoseconds += NANOSECOND_PER_MILLISECOND
+	// 		ms--
+	// 	}
+	// }
 
-	const big = new Big(ms)
+	const msAsBig = new Big(ms)
 
-	const toSeconds = () => Math.floor(big.div(MILLISECOND_PER_SECOND))
-	const toSecondsFloat = () => parseFloat(big.div(MILLISECOND_PER_SECOND))
-	const toMilliseconds = () => Math.floor(big)
-	const toMillisecondsFloat = () => parseFloat(big.toString())
+	const toSeconds = () => Math.floor(msAsBig.div(MILLISECOND_PER_SECOND))
+	const toSecondsFloat = () => parseFloat(msAsBig.div(MILLISECOND_PER_SECOND))
+	const toMilliseconds = () => Math.floor(msAsBig)
+	const toMillisecondsFloat = () => parseFloat(msAsBig.toString())
 	const getNanoseconds = () => nanoseconds
-	const toString = () => big.toString()
+	const toString = () => msAsBig.toString()
 	const valueOf = toMillisecondsFloat
 
 	const sum = otherNano =>
 		createNano(
-			parseFloat(big.plus(otherNano.toMillisecondsFloat())),
+			parseFloat(msAsBig.plus(otherNano.toMillisecondsFloat())),
 			nanoseconds + otherNano.getNanoseconds()
 		)
 	const substract = otherNano =>
 		createNano(
-			parseFloat(big.minus(otherNano.toMillisecondsFloat())),
+			parseFloat(msAsBig.minus(otherNano.toMillisecondsFloat())),
 			nanoseconds - otherNano.getNanoseconds()
 		)
 
@@ -62,7 +62,7 @@ export const createNano = (ms = 0, nanoseconds = 0) => {
 
 export const convertSecondsToMilliseconds = seconds => seconds * MILLISECOND_PER_SECOND
 
-export const createNanoFromSeconds = (seconds = 0) =>
-	createNano(convertSecondsToMilliseconds(seconds))
+export const createNanoFromSeconds = seconds => createNano(convertSecondsToMilliseconds(seconds))
 
 export const sum = (a, b) => parseFloat(new Big(a).plus(b))
+export const sub = (a, b) => parseFloat(new Big(a).minus(b))
