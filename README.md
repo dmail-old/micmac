@@ -3,11 +3,7 @@
 [![build](https://travis-ci.org/dmail/micmac.svg)](http://travis-ci.org/dmail/micmac)
 [![codecov](https://codecov.io/gh/dmail/micmac/branch/master/graph/badge.svg)](https://codecov.io/gh/dmail/micmac)
 
-Control JavaScript execution for testing time dependent or async code
-
-## Introduction
-
-Coming soon, source code not available for now.
+Mock most native way to execute JavaScript asynchonously to trigger them manually for testing.
 
 ## Example
 ```javascript
@@ -15,13 +11,15 @@ import {mockExecution} from 'micmac'
 
 mocExecution(({tick}) => {
   let called = false
-  setTimeout(() => { called = true }, 10)
+  setTimeout(() => {
+    called = true
+  }, 10)
   if (called) {
-    throw new Error('should not be called')
+    throw new Error("called must be false because 10ms are not ellapsed")
   }
   tick(10)
   if (called === false) {
-    throw new Error('should be called')
+    throw new Error("called must be true because tick(10) simulates that 10ms had ellapsed")
   }
 })
 ```

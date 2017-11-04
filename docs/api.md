@@ -1,10 +1,10 @@
-Examples and explanation about the API, especially mockExecution
+Examples and explanation about how to use micmac
 
 ## mockExecution(fn)
 
-mockExecution mock features on the global object and then calls fn.  
-This way when fn gets called, global function like setTimeout are mocked.  
-After fn gets called features are restored.
+mockExecution mock global features (such as setTimeout) and then calls fn.
+This way when fn gets called, global features are mocked.
+After fn gets called features are restored to their original value.
 
 ```javascript
 import {mockExecution} from 'micmac'
@@ -13,22 +13,22 @@ const globalSetTimeout = setTimeout
 mockExecution(
   () => {
     if (setTimeout === globaSetTimeout) {
-      throw new Error('setTimeout should be mocked')
+      throw new Error('setTimeout must be mocked')
     }
   }
 )
 if (globalSetTimeout !== setTimeout) {
-  throw new Error('setTimeout should be restored')
+  throw new Error('setTimeout must be restored')
 }
 ```
 
-Please note that if fn throws, mockExecution restore features because it wraps fn call into `try/finally`.
+Please note that if fn throws, mockExecution restore features because it wraps fn into `try/finally`.
 
 ### mockExecution examples
 
-This section will show many example of how mockExecution is meant to be used.  
-For the brievty of the examples some `toBeTested` function are declared inline. 
-In your application you would import it from an external module that you want to test.  
+This section will show many example of how mockExecution is meant to be used.
+For the brievty of the examples some `toBeTested` function are declared inline.
+In your application you would import it from an external module that you want to test.
 The examples not declaring `toBeTested` function are here to show side effects on time related features.
 
 ### Promise (BEST FEATURE)
@@ -36,18 +36,21 @@ The examples not declaring `toBeTested` function are here to show side effects o
 ```javascript
 import {mockExecution} from 'micmac'
 
-const toBeTested = (a) => Promise.resolve(a + 1)
+const toBeTested = () => Promise.resolve()
 
 mockExecution(
   ({tick}) => {
-    let value = 5
-    let actualValue
-    const expectedValue = value + 1
-    toBeTested(value).then(() => { actualValue = a })
-    if (actualValue !== undefined) throw new Error('promise.then should not be called synchronously')
+    let called = false
+    toBeTested().then(() => {
+      called = true
+    })
+    if (value) {
+      throw new Error('called must be false because promise.then(fn) calls fn on next event loop')
+    }
     tick()
-    if (actualValue == undefined) throw new Error('promise.then should be mocked')
-    if (actualValue !== expectedValue) throw new Error(`value should be ${expectedValue}`)
+    if (called === false) {
+      throw new Error('called must be true because tick() simulates that an event loop had ellapsed')
+    }
   }
 )
 ```
@@ -62,10 +65,16 @@ const toBeTested = (fn) => setTimeout(fn, 10)
 mockExecution(
   ({tick}) => {
     let called = false
-    toBeTested(() => { called = true })
-    if (called) throw new Error('should not be called')
+    toBeTested(() => {
+      called = true
+    })
+    if (called) {
+      throw new Error("called must be false because 10ms are not ellapsed")
+    }
     tick(10)
-    if (!called) throw new Error('should be called')
+    if (called === false) {
+      throw new Error("called must be true because tick(10) simulates that 10ms had ellapsed")
+    }
   }
 )
 ```
@@ -81,9 +90,12 @@ import {mockExecution} from 'micmac'
 mockExecution(
   ({tick}) => {
     const now = Date.now()
-    tick(10)    
-    if (new Date().getTime() !== now + 10) throw new Error('new Date() should be mocked')
-    if (Date.now() !== now + 10) throw new Error('Date.now() should be mocked')
+    tick(10)
+    if (new Date().getTime() !== now + 10) {
+      throw new Error('new Date() must return now + 10 because tick simulates 10ms had ellapsed')
+    }
+    if (Date.now() !== now + 10) {
+      throw new Error('Date.now() must return now + 10 because tick simulates 10ms had ellapsed')
   }
 )
 ```
@@ -98,7 +110,9 @@ mockExecution(
     const uptime = process.uptime()
     tick(1000)
     const afterTickUptime = process.uptime()
-    if (afterTickUptime !== uptime + 1) throw new Error('process.uptime() should be mocked')
+    if (afterTickUptime !== uptime + 1){
+      throw new Error('process.uptime() must return uptime + 1 because tick(1000) simulates that 1s had ellapsed')
+    }
   }
 )
 ```
@@ -111,10 +125,14 @@ import {mockExecution} from 'micmac'
 mockExecution(
   ({tick}) => {
     const [beforeTickSeconds, beforeTickNanoseconds] = process.hrtime()
-    tick(1000, 100) 
+    tick(1000, 100)
     const [afterTickSeconds, afterTickNanoseconds] = process.hrtime()
-    if (afterTickSeconds !== beforeTickSeconds + 1) throw new Error('process.hrtime()[0] should be mocked')
-    if (afterTickNanoseconds !== beforeTickNanoseconds + 100) throw new Error('process.hrtime()[1] should be mocked')
+    if (afterTickSeconds !== beforeTickSeconds + 1) {
+      throw new Error('process.hrtime()[0] must return beforeTickSeconds + 1 because tick(1000, 100) simulates that 1s had ellapsed')
+    }
+    if (afterTickNanoseconds !== beforeTickNanoseconds + 100) {
+      throw new Error('process.hrtime()[1] must return beforeTickNanoseconds + 100 because tick(1000, 100) simulates that 100ns had ellapsed')
+    }
   }
 )
 ```
