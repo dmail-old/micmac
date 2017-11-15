@@ -1,6 +1,6 @@
 {
 	"name": "micmac",
-	"version": "1.1.1",
+	"version": "2.0.0",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
@@ -24,8 +24,8 @@
 	},
 	"devDependencies": {
 		"@dmail/command": "0.1.1",
-		"@dmail/expect": "2.4.1",
-		"@dmail/prettiest": "0.2.1",
+		"@dmail/expect": "2.9.0",
+		"@dmail/prettiest": "1.0.0",
 		"@dmail/shared-config": "1.2.1",
 		"@dmail/spy": "1.0.1",
 		"@dmail/test": "2.2.1",
@@ -37,7 +37,7 @@
 		"eslint": "3.19.0",
 		"eslint-plugin-import": "2.6.0",
 		"nyc": "11.2.1",
-		"prettier": "1.7.0",
+		"prettier": "1.8.2",
 		"rimraf": "2.6.2"
 	},
 	"scripts": {

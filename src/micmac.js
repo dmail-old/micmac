@@ -8,153 +8,32 @@
 import { createExecutionController } from "./createExecutionController.js"
 import { createExecutionHooks } from "./createExecutionHooks.js"
 import { createFakePromise } from "./FakePromise.js"
-import { createNano, createNanoFromSeconds, convertSecondsToMilliseconds } from "./nano.js"
+import { createNano, convertSecondsToMilliseconds } from "./nano.js"
+import {
+	createFakeInstaller,
+	createSetCancelPairs,
+	composeFunctionAndReturnedFunctions
+} from "./helpers.js"
 
-const composeFunction = (a, b) => (...args) => {
-	a(...args)
-	b(...args)
-}
-const composeFunctionAndReturnedFunctions = (...fns) => (...args) => {
-	const returnedFns = fns.map(fn => fn(...args))
-	return () => {
-		returnedFns.forEach(returnedFn => returnedFn())
-	}
-}
-const createPropertyHelpers = object => {
-	const hasProperty = name => object.hasOwnProperty(name)
-	const getProperty = name => object[name]
-	const setProperty = (name, value) => {
-		const has = hasProperty(name)
-		const old = has ? getProperty(name) : undefined
-		object[name] = value
-		const restoreProperty = () => {
-			if (has) {
-				object[name] = old
-			} else {
-				delete object[name]
-			}
-		}
-		return restoreProperty
-	}
-
-	return {
-		has: hasProperty,
-		get: getProperty,
-		set: setProperty
-	}
-}
-const createFakeInstaller = installer => {
-	let installed = false
-
-	return ({ object, executionController }) => {
-		if (installed) {
-			throw new Error("already installed")
-		}
-		installed = true
-		let restore = () => {
-			installed = false
-		}
-		const addRestorer = fn => {
-			restore = composeFunction(restore, fn)
-		}
-		const mock = (instruction, where) => {
-			const { fake, set, get } = instruction
-
-			addRestorer(where.set(where.name, fake))
-			if (get) {
-				const initialNano = get()
-				executionController.setNanoReference(initialNano)
-				executionController.listenNano(() => {
-					set(executionController.getNano())
-				})
-				addRestorer(() => set(initialNano))
-			}
-		}
-		const getHowParams = where => where.get(where.name)
-		const override = (where, how) => {
-			if (where === null) {
-				return
-			}
-			const instruction = how(getHowParams(where))
-			mock(instruction, where)
-		}
-		const composeOverride = (...args) => {
-			const how = args.pop()
-			const wheres = args
-
-			if (wheres.some(where => where === null)) {
-				return
-			}
-			const instructions = how(...wheres.map(where => getHowParams(where)))
-			wheres.forEach((where, index) => mock(instructions[index], where))
-		}
-		const at = (...names) => {
-			if (names.length === 0) {
-				throw new Error("one name expected")
-			}
-			let i = 0
-			let { has, get, set } = createPropertyHelpers(object)
-			let name
-			while (i < names.length) {
-				name = names[i]
-				if (has(name) === false) {
-					return null
-				} else if (i === names.length - 1) {
-					break
-				}
-				;({ has, get, set } = createPropertyHelpers(get(name)))
-				i++
-			}
-			return {
-				has,
-				get,
-				set,
-				name
-			}
-		}
-		installer({
-			at,
-			override,
-			composeOverride,
-			executionController
-		})
-		return restore
-	}
-}
-const createSetCancelPairs = fnReturningCancel => {
-	let previousId = 0
-	const cancellerIds = {}
-
-	const set = (...args) => {
-		const id = previousId + 1
-		previousId = id
-		cancellerIds[id] = fnReturningCancel(...args)
-		return id
-	}
-	const cancel = id => {
-		if (id in cancellerIds) {
-			cancellerIds[id]()
-			delete cancellerIds[id]
-		}
-	}
-	return { set, cancel }
-}
-
-export const installFakeDate = createFakeInstaller(({ at, override }) =>
+const installFakeDate = createFakeInstaller(({ at, override, executionController, installed }) =>
 	override(at("Date"), RealDate => {
-		let nano = createNano(RealDate.now())
+		let fakeNano = createNano()
+		const getRealNow = () => RealDate.now()
+		// 0.00001% chance this feature to be used someday:
+		// once uninstalled fakeNow returns RealDate.now so that it remains valid
+		const getFakeNow = () => (installed.isOn() ? fakeNano.getMilliseconds() : getRealNow())
+		// ideally once uninstalled fakeDate.now should return RealDate.now
 		function FakeDate(...args) {
 			// eslint-disable-line no-inner-declarations
 			if (args.length === 0) {
-				return new RealDate(nano.toMilliseconds())
+				return new RealDate(getFakeNow())
 			}
 			return new RealDate(...args)
 		}
-		// ideally once uninstalled fakeDate.now should return RealDate.now
-		const fakeNow = () => nano.toMilliseconds()
 		const overrides = {
-			now: fakeNow
+			now: getFakeNow
 		}
+
 		Object.getOwnPropertyNames(RealDate).forEach(name => {
 			const descriptor = Object.getOwnPropertyDescriptor(RealDate, name)
 			if (descriptor.configurable) {
@@ -165,137 +44,139 @@ export const installFakeDate = createFakeInstaller(({ at, override }) =>
 			}
 		})
 
+		Object.assign(executionController, {
+			getRealNow,
+			getFakeNow
+		})
+
 		return {
-			get: () => nano,
-			set: fakeNano => {
-				nano = fakeNano
+			changed: (previousNano, nano) => {
+				fakeNano = fakeNano.add(nano.substract(previousNano))
 			},
 			fake: FakeDate
 		}
 	})
 )
-export const installFakeImmediate = createFakeInstaller(
-	({ at, composeOverride, executionController }) =>
-		composeOverride(at("setImmediate"), at("clearImmediate"), () => {
-			const { setMicro } = createExecutionHooks(executionController)
 
-			const immediateCancellerIds = {}
-			let previousImmediateId = 0
-
-			const fakeSetImmediate = (...args) => {
-				const immediateId = previousImmediateId + 1
-				previousImmediateId = immediateId
-				immediateCancellerIds[immediateId] = setMicro(...args)
-				return immediateId
+const installFakeImmediate = createFakeInstaller(({ at, composeOverride, executionController }) =>
+	composeOverride(at("setImmediate"), at("clearImmediate"), () => {
+		const { setMicro } = createExecutionHooks(executionController)
+		const { set: fakeSetImmediate, cancel: fakeClearImmediate } = createSetCancelPairs(setMicro)
+		return [
+			{
+				fake: fakeSetImmediate
+			},
+			{
+				fake: fakeClearImmediate
 			}
-			const fakeClearImmediate = immediateId => {
-				if (immediateId in immediateCancellerIds) {
-					immediateCancellerIds[immediateId]()
-					delete immediateCancellerIds[immediateId]
-				}
-			}
-			return [
-				{
-					fake: fakeSetImmediate
-				},
-				{
-					fake: fakeClearImmediate
-				}
-			]
-		})
+		]
+	})
 )
+
 // the purpose of installing fake promise is that our fakePromise will rely on setImmediate
 // when chaining thenable, if setImmediate was mocked as well
 // we are now in a situation where we can control promise execution
 // https://github.com/charleshansen/mock-promises
-export const installFakePromise = createFakeInstaller(({ at, override }) =>
+const installFakePromise = createFakeInstaller(({ at, override }) =>
 	override(at("Promise"), () => {
 		return {
 			fake: createFakePromise()
 		}
 	})
 )
-export const installFakeTimeout = createFakeInstaller(
-	({ at, composeOverride, executionController }) =>
-		composeOverride(at("setTimeout"), at("clearTimeout"), () => {
-			const { delay } = createExecutionHooks(executionController)
-			const { set: fakeSetTimeout, cancel: fakeClearTimeout } = createSetCancelPairs(delay)
-			return [
-				{
-					fake: fakeSetTimeout
-				},
-				{
-					fake: fakeClearTimeout
-				}
-			]
-		})
-)
-export const installFakeInterval = createFakeInstaller(
-	({ at, composeOverride, executionController }) =>
-		composeOverride(at("setInterval"), at("clearInterval"), () => {
-			const { delayRecursive } = createExecutionHooks(executionController)
-			const { set: fakeSetInterval, cancel: fakeClearInterval } = createSetCancelPairs(
-				delayRecursive
-			)
-			return [
-				{
-					fake: fakeSetInterval
-				},
-				{
-					fake: fakeClearInterval
-				}
-			]
-		})
-)
-export const installFakeProcessNextTick = createFakeInstaller(
-	({ at, override, executionController }) =>
-		override(at("process", "nextTick"), () => {
-			const { setMicro } = createExecutionHooks(executionController)
-			const fakeProcessNextTick = (fn, ...args) => {
-				setMicro(fn, ...args)
-			}
-			return {
-				fake: fakeProcessNextTick
-			}
-		})
-)
-export const installFakeProcessUptime = createFakeInstaller(({ at, override }) =>
-	override(at("process", "uptime"), processUptime => {
-		let nano = createNanoFromSeconds(processUptime())
-		const fakeUptime = () => nano.toSecondsFloat()
-		return {
-			get: () => nano,
-			set: fakeNano => {
-				nano = fakeNano
+
+const installFakeTimeout = createFakeInstaller(({ at, composeOverride, executionController }) =>
+	composeOverride(at("setTimeout"), at("clearTimeout"), () => {
+		const { delay } = createExecutionHooks(executionController)
+		const { set: fakeSetTimeout, cancel: fakeClearTimeout } = createSetCancelPairs(delay)
+		return [
+			{
+				fake: fakeSetTimeout
 			},
-			fake: fakeUptime
+			{
+				fake: fakeClearTimeout
+			}
+		]
+	})
+)
+
+const installFakeInterval = createFakeInstaller(({ at, composeOverride, executionController }) =>
+	composeOverride(at("setInterval"), at("clearInterval"), () => {
+		const { delayRecursive } = createExecutionHooks(executionController)
+		const { set: fakeSetInterval, cancel: fakeClearInterval } = createSetCancelPairs(delayRecursive)
+		return [
+			{
+				fake: fakeSetInterval
+			},
+			{
+				fake: fakeClearInterval
+			}
+		]
+	})
+)
+
+const installFakeProcessNextTick = createFakeInstaller(({ at, override, executionController }) =>
+	override(at("process", "nextTick"), () => {
+		const { setMicro } = createExecutionHooks(executionController)
+		const fakeProcessNextTick = (fn, ...args) => {
+			setMicro(fn, ...args)
+		}
+		return {
+			fake: fakeProcessNextTick
 		}
 	})
 )
-export const installFakeProcessHrtime = createFakeInstaller(({ at, override }) =>
+
+const installFakeProcessUptime = createFakeInstaller(({ at, override, executionController }) =>
+	override(at("process", "uptime"), processUptime => {
+		let fakeNano = createNano()
+		const getRealUptime = () => processUptime()
+		const getFakeUptime = () => fakeNano.getSecondsFloat()
+
+		Object.assign(executionController, {
+			getRealUptime,
+			getFakeUptime
+		})
+
+		return {
+			changed: (previousNano, nano) => {
+				fakeNano = fakeNano.add(nano.substract(previousNano))
+			},
+			fake: getFakeUptime
+		}
+	})
+)
+
+const installFakeProcessHrtime = createFakeInstaller(({ at, override, executionController }) =>
 	override(at("process", "hrtime"), processHrtime => {
 		const createNanoFromSecondsAndNanoseconds = ([seconds, nanoseconds]) =>
 			createNano(convertSecondsToMilliseconds(seconds), nanoseconds)
-		let nano = createNanoFromSecondsAndNanoseconds(processHrtime())
-
-		const fakeHrtime = time => {
+		let fakeNano = createNano()
+		const getRealHrtime = () => processHrtime()
+		const getFakeHrtime = time => {
 			if (time) {
 				const timeNano = createNanoFromSecondsAndNanoseconds(time)
-				const diffNano = nano.substract(timeNano)
-				return [diffNano.toSecondsFloat(), diffNano.getNanoseconds()]
+				const diffNano = fakeNano.substract(timeNano)
+				return [diffNano.getSecondsFloat(), diffNano.getNanoseconds()]
 			}
-			return [nano.toSecondsFloat(), nano.getNanoseconds()]
+			return [fakeNano.getSecondsFloat(), fakeNano.getNanoseconds()]
 		}
+
+		Object.assign(executionController, {
+			getRealHrtime,
+			getFakeHrtime
+		})
+
 		return {
-			get: () => nano,
-			set: fakeNano => {
-				nano = fakeNano
+			changed: (previousNano, nano) => {
+				fakeNano = fakeNano.add(nano.substract(previousNano))
 			},
-			fake: fakeHrtime
+			fake: getFakeHrtime
 		}
 	})
 )
-export const installFakeAnimationFrame = createFakeInstaller(
+
+const installFakeAnimationFrame = createFakeInstaller(
 	({ at, composeOverride, executionController }) =>
 		composeOverride(at("requestAnimationFrame"), at("cancelAnimationFrame"), () => {
 			const { delayRecursive } = createExecutionHooks(executionController)
@@ -313,19 +194,27 @@ export const installFakeAnimationFrame = createFakeInstaller(
 			]
 		})
 )
-export const installFakePerformanceNow = createFakeInstaller(({ at, override }) =>
+
+const installFakePerformanceNow = createFakeInstaller(({ at, override, executionController }) =>
 	override(at("performance", "now"), performanceNow => {
-		let nano = createNano(performanceNow())
-		const fakePerformanceNow = () => nano.toMillisecondsFloat().toFixed(4)
+		let fakeNano = createNano()
+		const getRealPerformanceNow = () => performanceNow()
+		const getFakePerformanceNow = () => fakeNano.getMillisecondsFloat().toFixed(4)
+
+		Object.assign(executionController, {
+			getRealPerformanceNow,
+			getFakePerformanceNow
+		})
+
 		return {
-			get: () => nano,
-			set: fakeNano => {
-				nano = fakeNano
+			changed: (previousNano, nano) => {
+				fakeNano = fakeNano.add(nano.substract(previousNano))
 			},
-			fake: fakePerformanceNow
+			fake: getFakePerformanceNow
 		}
 	})
 )
+
 const installFakeHooks = composeFunctionAndReturnedFunctions(
 	installFakeDate,
 	installFakePromise,

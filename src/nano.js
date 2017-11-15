@@ -23,30 +23,49 @@ export const createNano = (ms = 0, nanoseconds = 0) => {
 
 	const msAsBig = new Big(ms)
 
-	const toSeconds = () => Math.floor(msAsBig.div(MILLISECOND_PER_SECOND))
-	const toSecondsFloat = () => parseFloat(msAsBig.div(MILLISECOND_PER_SECOND))
-	const toMilliseconds = () => Math.floor(msAsBig)
-	const toMillisecondsFloat = () => parseFloat(msAsBig.toString())
+	const getSeconds = () => Math.floor(msAsBig.div(MILLISECOND_PER_SECOND))
+	const getSecondsFloat = () => parseFloat(msAsBig.div(MILLISECOND_PER_SECOND))
+	const getMilliseconds = () => Math.floor(msAsBig)
+	const getMillisecondsFloat = () => parseFloat(msAsBig.toString())
 	const getNanoseconds = () => nanoseconds
-	const toString = () => msAsBig.toString()
-	const valueOf = toMillisecondsFloat
+	const toString = () => `nano(${msAsBig.toString()}, ${nanoseconds})`
+	const valueOf = getMillisecondsFloat
 
 	const sum = otherNano =>
 		createNano(
-			parseFloat(msAsBig.plus(otherNano.toMillisecondsFloat())),
+			parseFloat(msAsBig.plus(otherNano.getMillisecondsFloat())),
 			nanoseconds + otherNano.getNanoseconds()
 		)
 	const substract = otherNano =>
 		createNano(
-			parseFloat(msAsBig.minus(otherNano.toMillisecondsFloat())),
+			parseFloat(msAsBig.minus(otherNano.getMillisecondsFloat())),
 			nanoseconds - otherNano.getNanoseconds()
 		)
+	const compare = otherNano => {
+		const millisecondsFloat = getMillisecondsFloat()
+		const otherMillisecondsFloat = otherNano.getMillisecondsFloat()
+		if (millisecondsFloat < otherMillisecondsFloat) {
+			return -1
+		}
+		if (millisecondsFloat > otherMillisecondsFloat) {
+			return 1
+		}
+		const nanoseconds = getNanoseconds()
+		const otherNanoseconds = otherNano.getNanoseconds()
+		if (nanoseconds < otherNanoseconds) {
+			return -1
+		}
+		if (nanoseconds > otherNanoseconds) {
+			return 1
+		}
+		return 0
+	}
 
 	return {
-		toSeconds,
-		toSecondsFloat,
-		toMilliseconds,
-		toMillisecondsFloat,
+		getSeconds,
+		getSecondsFloat,
+		getMilliseconds,
+		getMillisecondsFloat,
 		getNanoseconds,
 
 		toString,
@@ -56,7 +75,10 @@ export const createNano = (ms = 0, nanoseconds = 0) => {
 		substract,
 
 		add: sum,
-		diff: substract
+		diff: substract,
+		sub: substract,
+
+		compare
 	}
 }
 

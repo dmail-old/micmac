@@ -1,6 +1,25 @@
 import { createSignal } from "@dmail/signal"
 import { createNano } from "./nano.js"
 
+const createFunctionWithPositiveMillisecondsAndNanosecondsSignature = fn => (
+	milliseconds = 0,
+	nanoseconds = 0
+) => {
+	if (typeof milliseconds !== "number") {
+		throw new TypeError(`${fn.name} first arg must be milliseconds, got ${milliseconds}`)
+	}
+	if (milliseconds < 0) {
+		throw new Error(`${fn.name} first arg must be positive milliseconds, got ${milliseconds}`)
+	}
+	if (typeof nanoseconds !== "number") {
+		throw new TypeError(`${fn.name} second arg must be nanoseconds, got ${milliseconds}`)
+	}
+	if (nanoseconds < 0) {
+		throw new Error(`${fn.name} first arg must be positive nanoseconds, got ${milliseconds}`)
+	}
+	return fn(milliseconds, nanoseconds)
+}
+
 export const createExecutionController = () => {
 	const { listen: listenMacro, emit: emitMacro } = createSignal()
 	const { listen: listenMicro, emit: emitMicro } = createSignal()
@@ -20,25 +39,21 @@ export const createExecutionController = () => {
 		}
 	}
 	let absoluteNano = createNano()
-	let nanoReference = absoluteNano
 	let currentNano = absoluteNano
 	const changeNano = nano => {
-		currentNano = nano
-		emitNanoChanged()
+		if (currentNano.compare(nano)) {
+			currentNano = nano
+			emitNanoChanged()
+		}
 	}
-	const setNanoReference = nano => {
-		nanoReference = nano
-		changeNano(nano)
-	}
-	const setTimeReference = (ms, ns) => setNanoReference(createNano(ms, ns))
-	const tick = (ellapsedMs = 0, ellapsedNs = 0) => {
-		if (ellapsedMs || ellapsedNs) {
-			changeNano(currentNano.add(createNano(ellapsedMs, ellapsedNs)))
+	const tick = (ellapsedMilliseconds, ellapsedNanoseconds) => {
+		if (ellapsedMilliseconds || ellapsedNanoseconds) {
+			changeNano(currentNano.add(createNano(ellapsedMilliseconds, ellapsedNanoseconds)))
 		}
 		macro()
 	}
-	const tickRelative = (nowMs = 0, nowNs = 0) => {
-		changeNano(nanoReference.add(createNano(nowMs, nowNs)))
+	const tickAbsolute = (milliseconds, nanoseconds) => {
+		changeNano(createNano(milliseconds, nanoseconds))
 		macro()
 	}
 	const getNano = () => currentNano
@@ -49,10 +64,8 @@ export const createExecutionController = () => {
 		listenNano,
 		macro,
 		micro,
-		setNanoReference,
-		setTimeReference,
 		getNano,
-		tick,
-		tickRelative
+		tick: createFunctionWithPositiveMillisecondsAndNanosecondsSignature(tick),
+		tickAbsolute: createFunctionWithPositiveMillisecondsAndNanosecondsSignature(tickAbsolute)
 	}
 }

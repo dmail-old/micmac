@@ -12,6 +12,19 @@
 				"panel": "shared"
 			},
 			"problemMatcher": []
+		},
+		{
+			"label": "Format with prettier",
+			"type": "shell",
+			"command": "./node_modules/.bin/prettier ${file} --write",
+			"windows": {
+				"command": ".\\node_modules\\.bin\\prettier.cmd ${file} --write"
+			},
+			"group": "none",
+			"presentation": {
+				"reveal": "silent",
+				"panel": "new"
+			}
 		}
 	]
 }
