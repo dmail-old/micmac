@@ -42,8 +42,8 @@ export const createExecutionHooks = ({ listenMacro, listenMicro, getNano }) => {
 		let nano = createNano()
 		let ellapsedMs = 0
 		const addDelayedMacro = (fn, ms, ...args) => {
-			const addedMs = nano.toMilliseconds()
-			return addMacro(() => fn(...args), () => nano.toMilliseconds() - addedMs >= ms)
+			const addedMs = nano.getMilliseconds()
+			return addMacro(() => fn(...args), () => nano.getMilliseconds() - addedMs >= ms)
 		}
 		const delay = (fn, msDelay = 0, ...args) => {
 			const macro = addDelayedMacro(fn, msDelay, ...args)
@@ -83,7 +83,11 @@ export const createExecutionHooks = ({ listenMacro, listenMicro, getNano }) => {
 
 		listenMacro(() => {
 			const fakeNano = getNano()
-			ellapsedMs = fakeNano.substract(nano).toMilliseconds()
+			if (nano.lowerThan(fakeNano)) {
+				ellapsedMs = fakeNano.minus(nano).getMilliseconds()
+			} else {
+				ellapsedMs = nano.minus(fakeNano).getMilliseconds()
+			}
 			nano = fakeNano
 			runMacros()
 		})
@@ -125,7 +129,9 @@ export const createExecutionHooks = ({ listenMacro, listenMicro, getNano }) => {
 				}
 			}
 		}
-		listenMicro(runMicros)
+		listenMicro(() => {
+			runMicros()
+		})
 
 		const setMicro = (fn, ...args) => {
 			const micro = addMicro(() => fn(...args))

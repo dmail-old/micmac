@@ -1,7 +1,6 @@
 // https://github.com/substack/node-mkdirp/issues/129
 
 import { mockExecution } from "./micmac.js"
-import { sum, sub } from "./nano.js"
 
 import { createTest } from "@dmail/test"
 import { createSpy } from "@dmail/spy"
@@ -12,10 +11,68 @@ import {
 	expectCalledOnceWithoutArgument,
 	expectCalledTwiceWithoutArgument,
 	expectCalledOnceWith,
-	expectNotCalled
+	expectNotCalled,
+	matchProperties
 } from "@dmail/expect"
 
 export default createTest({
+	"getRealNow() with tick & tickAbsolute": () => {
+		const RealDate = Date
+		return mockExecution(({ getRealNow, tick, tickAbsolute }) =>
+			expectChain(
+				() => expectMatch(getRealNow(), RealDate.now()),
+				() => tick(10),
+				() => tick(2),
+				() => expectMatch(getRealNow(), RealDate.now()),
+				() => tickAbsolute(23),
+				() => expectMatch(getRealNow(), RealDate.now())
+			)
+		)
+	},
+	"getFakeNow() with tick & tickAbsolute": () =>
+		mockExecution(({ getFakeNow, tick, tickAbsolute }) => {
+			return expectChain(
+				() => expectMatch(getFakeNow(), 0),
+				() => tick(10),
+				() => tick(2),
+				() => expectMatch(getFakeNow(), 12),
+				() => tickAbsolute(23),
+				() => expectMatch(getFakeNow(), 23)
+			)
+		}),
+	"Date.now() with tick, tickAbsolute": () =>
+		mockExecution(({ tick, tickAbsolute }) =>
+			expectChain(
+				() => expectMatch(Date.now(), 0),
+				() => tick(10),
+				() => tick(2),
+				() => expectMatch(Date.now(), 12),
+				() => tickAbsolute(5),
+				() => expectMatch(Date.now(), 5)
+			)
+		),
+	"new Date().getTime() with tick, tickAbsolute": () =>
+		mockExecution(({ tick, tickAbsolute }) =>
+			expectChain(
+				() => expectMatch(new Date().getTime(), 0),
+				() => tick(10),
+				() => tick(2),
+				() => expectMatch(new Date().getTime(), 12),
+				() => tickAbsolute(5),
+				() => expectMatch(new Date().getTime(), 5)
+			)
+		),
+	"new Date('1 January 1970 00:00:00 UTC').getTime() with tick, tickAbsolute": () =>
+		mockExecution(({ tick, tickAbsolute }) =>
+			expectChain(
+				() => expectMatch(new Date("1 January 1970 00:00:00 UTC").getTime(), 0),
+				() => tick(10),
+				() => tick(2),
+				() => expectMatch(new Date("1 January 1970 00:00:00 UTC").getTime(), 0),
+				() => tickAbsolute(5),
+				() => expectMatch(new Date("1 January 1970 00:00:00 UTC").getTime(), 0)
+			)
+		),
 	"mockExecution temp overrides global Date constructor": () => {
 		const globalDate = Date
 		return expectChain(
@@ -23,61 +80,40 @@ export default createTest({
 			() => expectMatch(globalDate, Date)
 		)
 	},
-	"Date.now() and new Date().getTime() returns fake amount of ms": () =>
-		mockExecution(({ tick, tickRelative, setTimeReference }) => {
-			const ms = Date.now()
-			return expectChain(
-				() => expectMatch(Date.now(), ms),
+	"FakeDate.now valid once uninstalled": () =>
+		expectMatch(mockExecution(() => Date).now(), Date.now()),
+	"process.uptime()": () =>
+		mockExecution(({ tick }) => {
+			tick(10)
+			return expectMatch(process.uptime(), 0.01)
+		}),
+	"getRealuptime()": () => {
+		const getUptime = process.uptime
+		return mockExecution(({ getRealUptime, tick, tickAbsolute }) =>
+			expectChain(
+				() => expectMatch(getRealUptime(), getUptime()),
 				() => tick(10),
-				() => expectMatch(Date.now(), ms + 10),
-				() => expectMatch(new Date().getTime(), ms + 10),
-				() => expectMatch(new Date("1 January 1970 00:00:00 UTC").getTime(), 0),
-				() => tickRelative(10),
-				() => expectMatch(Date.now(), ms + 10),
-				() => setTimeReference(),
-				() => expectMatch(Date.now(), 0)
+				() => tick(2),
+				() => expectMatch(getRealUptime(), getUptime()),
+				() => tickAbsolute(23),
+				() => expectMatch(getRealUptime(), getUptime())
 			)
-		}),
-	"process.uptime": () =>
-		mockExecution(({ tick }) => {
-			const uptime = process.uptime()
-			const addedMs = 10
-			tick(addedMs)
-			const actualUptime = process.uptime()
-			const expectedUptime = sum(uptime, addedMs / 1000)
-			return expectMatch(actualUptime, expectedUptime)
-		}),
-	"process.hrtime": () =>
-		mockExecution(({ tick }) => {
-			const [initialSeconds, initialNanoseconds] = process.hrtime()
-			const addedMs = 10
-			const addedNs = 20
-			const removedSeconds = 20
-			const removedNs = 100
-
-			return expectChain(
-				() => tick(addedMs, addedNs),
-				() => process.hrtime(),
-				([seconds, nanoseconds]) => {
-					const expectedSeconds = sum(initialSeconds, addedMs / 1000)
-					const expectedNanoseconds = initialNanoseconds + addedNs
-					return expectChain(
-						() => expectMatch(seconds, expectedSeconds),
-						() => expectMatch(nanoseconds, expectedNanoseconds)
-					)
-				},
-				() => process.hrtime([removedSeconds, removedNs], [initialSeconds, initialNanoseconds]),
-				([seconds, nanoseconds]) => {
-					const expectedSeconds = sub(sum(initialSeconds, addedMs / 1000), removedSeconds)
-					const expectedNanoseconds = initialNanoseconds + addedNs - removedNs
-					return expectChain(
-						() => expectMatch(seconds, expectedSeconds),
-						() => expectMatch(nanoseconds, expectedNanoseconds)
-					)
-				}
+		)
+	},
+	"process.hrtime()": () =>
+		mockExecution(({ tick }) =>
+			expectChain(
+				() => expectMatch(process.hrtime(), matchProperties([0, 0])),
+				() => tick(10, 20),
+				() => expectMatch(process.hrtime(), matchProperties([0.01, 20])),
+				() => expectMatch(process.hrtime([0.002, 12]), matchProperties([0.008, 8]))
 			)
-		}),
-	"process.nextTick": () =>
+		),
+	"getRealHrtime()": () => {
+		const getHrtime = process.hrtime
+		return mockExecution(({ getRealHrtime }) => expectMatch(getRealHrtime()[0], getHrtime()[0]))
+	},
+	"process.nextTick()": () =>
 		mockExecution(({ micro }) => {
 			const spy = createSpy()
 			const args = [0, 1]
@@ -181,9 +217,12 @@ export default createTest({
 			const innerPromise = new Promise(resolve => resolve(nestedPromise))
 			const outerPromise = createPromiseResolvedIn(20, innerPromise)
 
-			const expectPending = (...args) => args.forEach(arg => expectMatch(arg.status, "pending"))
-			const expectFulfilled = (...args) => args.forEach(arg => expectMatch(arg.status, "fulfilled"))
-			const expectResolved = (...args) => args.forEach(arg => expectMatch(arg.status, "resolved"))
+			const expectPending = (...args) =>
+				expectChain(...args.map(arg => () => expectMatch(arg.status, "pending")))
+			const expectFulfilled = (...args) =>
+				expectChain(...args.map(arg => () => expectMatch(arg.status, "fulfilled")))
+			const expectResolved = (...args) =>
+				expectChain(...args.map(arg => () => expectMatch(arg.status, "resolved")))
 
 			return expectChain(
 				() => expectPending(nestedPromise, outerPromise),
