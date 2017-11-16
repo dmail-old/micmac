@@ -20,25 +20,21 @@ export const createExecutionController = () => {
 		}
 	}
 	let absoluteNano = createNano()
-	let nanoReference = absoluteNano
 	let currentNano = absoluteNano
 	const changeNano = nano => {
-		currentNano = nano
-		emitNanoChanged()
+		if (currentNano.compare(nano)) {
+			currentNano = nano
+			emitNanoChanged()
+		}
 	}
-	const setNanoReference = nano => {
-		nanoReference = nano
-		changeNano(nano)
-	}
-	const setTimeReference = (ms, ns) => setNanoReference(createNano(ms, ns))
-	const tick = (ellapsedMs = 0, ellapsedNs = 0) => {
-		if (ellapsedMs || ellapsedNs) {
-			changeNano(currentNano.add(createNano(ellapsedMs, ellapsedNs)))
+	const tick = (ellapsedMilliseconds, ellapsedNanoseconds) => {
+		if (ellapsedMilliseconds || ellapsedNanoseconds) {
+			changeNano(currentNano.plus(createNano(ellapsedMilliseconds, ellapsedNanoseconds)))
 		}
 		macro()
 	}
-	const tickRelative = (nowMs = 0, nowNs = 0) => {
-		changeNano(nanoReference.add(createNano(nowMs, nowNs)))
+	const tickAbsolute = (milliseconds, nanoseconds) => {
+		changeNano(createNano(milliseconds, nanoseconds))
 		macro()
 	}
 	const getNano = () => currentNano
@@ -49,10 +45,8 @@ export const createExecutionController = () => {
 		listenNano,
 		macro,
 		micro,
-		setNanoReference,
-		setTimeReference,
 		getNano,
 		tick,
-		tickRelative
+		tickAbsolute
 	}
 }
