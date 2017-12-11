@@ -12,32 +12,10 @@ import {
 	expectCalledTwiceWithoutArgument,
 	expectCalledOnceWith,
 	expectNotCalled,
-	expectThrowWith,
-	matchTypeErrorWith,
-	matchErrorWith,
 	matchProperties
 } from "@dmail/expect"
 
 export default createTest({
-	"when passed, tick first arg must be a positive number": () =>
-		mockExecution(({ tick }) =>
-			expectChain(
-				() =>
-					expectThrowWith(
-						() => tick(null),
-						matchTypeErrorWith({
-							message: `tick first arg must be milliseconds, got null`
-						})
-					),
-				() =>
-					expectThrowWith(
-						() => tick(-1),
-						matchErrorWith({
-							message: `tick first arg must be positive milliseconds, got -1`
-						})
-					)
-			)
-		),
 	"getRealNow() with tick & tickAbsolute": () => {
 		const RealDate = Date
 		return mockExecution(({ getRealNow, tick, tickAbsolute }) =>
@@ -109,6 +87,19 @@ export default createTest({
 			tick(10)
 			return expectMatch(process.uptime(), 0.01)
 		}),
+	"getRealuptime()": () => {
+		const getUptime = process.uptime
+		return mockExecution(({ getRealUptime, tick, tickAbsolute }) =>
+			expectChain(
+				() => expectMatch(getRealUptime(), getUptime()),
+				() => tick(10),
+				() => tick(2),
+				() => expectMatch(getRealUptime(), getUptime()),
+				() => tickAbsolute(23),
+				() => expectMatch(getRealUptime(), getUptime())
+			)
+		)
+	},
 	"process.hrtime()": () =>
 		mockExecution(({ tick }) =>
 			expectChain(
@@ -118,6 +109,10 @@ export default createTest({
 				() => expectMatch(process.hrtime([0.002, 12]), matchProperties([0.008, 8]))
 			)
 		),
+	"getRealHrtime()": () => {
+		const getHrtime = process.hrtime
+		return mockExecution(({ getRealHrtime }) => expectMatch(getRealHrtime()[0], getHrtime()[0]))
+	},
 	"process.nextTick()": () =>
 		mockExecution(({ micro }) => {
 			const spy = createSpy()

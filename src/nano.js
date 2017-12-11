@@ -1,27 +1,33 @@
 // http://mikemcl.github.io/big.js/
 import Big from "big-js"
 
-// const NANOSECOND_PER_MILLISECOND = 1000000
+const NANOSECOND_PER_MILLISECOND = 1000000
 const MILLISECOND_PER_SECOND = 1000
 
-export const createNano = (ms = 0, nanoseconds = 0) => {
+export const createNano = (milliseconds = 0, nanoseconds = 0) => {
+	if (typeof milliseconds !== "number") {
+		throw new TypeError(`createNano first arg must be milliseconds, got ${milliseconds}`)
+	}
+	if (milliseconds < 0) {
+		throw new Error(`createNano first arg must be positive milliseconds, got ${milliseconds}`)
+	}
+	if (typeof nanoseconds !== "number") {
+		throw new TypeError(`createNano second arg must be nanoseconds, got ${nanoseconds}`)
+	}
+	if (nanoseconds < 0) {
+		throw new Error(`createNano second arg must be positive nanoseconds, got ${nanoseconds}`)
+	}
+
 	// just in case someone thinks nanoseconds float are a great idea we round them
 	// because nanoseconds is the most atomic time unit so float makes no sense
 	nanoseconds = parseInt(nanoseconds)
 
-	// if (nanoseconds > 0) {
-	// 	while (nanoseconds >= NANOSECOND_PER_MILLISECOND) {
-	// 		nanoseconds -= NANOSECOND_PER_MILLISECOND
-	// 		ms++
-	// 	}
-	// } else if (nanoseconds < 0) {
-	// 	while (nanoseconds < 0) {
-	// 		nanoseconds += NANOSECOND_PER_MILLISECOND
-	// 		ms--
-	// 	}
-	// }
+	if (nanoseconds >= NANOSECOND_PER_MILLISECOND) {
+		milliseconds += Math.floor(nanoseconds / NANOSECOND_PER_MILLISECOND)
+		nanoseconds %= NANOSECOND_PER_MILLISECOND
+	}
 
-	const msAsBig = new Big(ms)
+	const msAsBig = new Big(milliseconds)
 
 	const getSeconds = () => Math.floor(msAsBig.div(MILLISECOND_PER_SECOND))
 	const getSecondsFloat = () => parseFloat(msAsBig.div(MILLISECOND_PER_SECOND))
@@ -31,12 +37,12 @@ export const createNano = (ms = 0, nanoseconds = 0) => {
 	const toString = () => `nano(${msAsBig.toString()}, ${nanoseconds})`
 	const valueOf = getMillisecondsFloat
 
-	const sum = otherNano =>
+	const plus = otherNano =>
 		createNano(
 			parseFloat(msAsBig.plus(otherNano.getMillisecondsFloat())),
 			nanoseconds + otherNano.getNanoseconds()
 		)
-	const substract = otherNano =>
+	const minus = otherNano =>
 		createNano(
 			parseFloat(msAsBig.minus(otherNano.getMillisecondsFloat())),
 			nanoseconds - otherNano.getNanoseconds()
@@ -60,6 +66,8 @@ export const createNano = (ms = 0, nanoseconds = 0) => {
 		}
 		return 0
 	}
+	const lowerThan = otherNano => compare(otherNano) === -1
+	const greaterThan = otherNano => compare(otherNano) === 1
 
 	return {
 		getSeconds,
@@ -71,20 +79,15 @@ export const createNano = (ms = 0, nanoseconds = 0) => {
 		toString,
 		valueOf,
 
-		sum,
-		substract,
+		plus,
+		minus,
 
-		add: sum,
-		diff: substract,
-		sub: substract,
-
-		compare
+		compare,
+		lowerThan,
+		greaterThan
 	}
 }
 
 export const convertSecondsToMilliseconds = seconds => seconds * MILLISECOND_PER_SECOND
 
 export const createNanoFromSeconds = seconds => createNano(convertSecondsToMilliseconds(seconds))
-
-export const sum = (a, b) => parseFloat(new Big(a).plus(b))
-export const sub = (a, b) => parseFloat(new Big(a).minus(b))

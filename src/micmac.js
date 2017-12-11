@@ -15,6 +15,13 @@ import {
 	composeFunctionAndReturnedFunctions
 } from "./helpers.js"
 
+const syncNano = (nano, previousNano, currentNano) => {
+	if (previousNano.lowerThan(currentNano)) {
+		return nano.plus(currentNano.minus(previousNano))
+	}
+	return nano.minus(previousNano.minus(currentNano))
+}
+
 const installFakeDate = createFakeInstaller(({ at, override, executionController, installed }) =>
 	override(at("Date"), RealDate => {
 		let fakeNano = createNano()
@@ -51,7 +58,7 @@ const installFakeDate = createFakeInstaller(({ at, override, executionController
 
 		return {
 			changed: (previousNano, nano) => {
-				fakeNano = fakeNano.add(nano.substract(previousNano))
+				fakeNano = syncNano(fakeNano, previousNano, nano)
 			},
 			fake: FakeDate
 		}
@@ -140,7 +147,7 @@ const installFakeProcessUptime = createFakeInstaller(({ at, override, executionC
 
 		return {
 			changed: (previousNano, nano) => {
-				fakeNano = fakeNano.add(nano.substract(previousNano))
+				fakeNano = syncNano(fakeNano, previousNano, nano)
 			},
 			fake: getFakeUptime
 		}
@@ -156,7 +163,7 @@ const installFakeProcessHrtime = createFakeInstaller(({ at, override, executionC
 		const getFakeHrtime = time => {
 			if (time) {
 				const timeNano = createNanoFromSecondsAndNanoseconds(time)
-				const diffNano = fakeNano.substract(timeNano)
+				const diffNano = fakeNano.minus(timeNano)
 				return [diffNano.getSecondsFloat(), diffNano.getNanoseconds()]
 			}
 			return [fakeNano.getSecondsFloat(), fakeNano.getNanoseconds()]
@@ -169,7 +176,7 @@ const installFakeProcessHrtime = createFakeInstaller(({ at, override, executionC
 
 		return {
 			changed: (previousNano, nano) => {
-				fakeNano = fakeNano.add(nano.substract(previousNano))
+				fakeNano = syncNano(fakeNano, previousNano, nano)
 			},
 			fake: getFakeHrtime
 		}
@@ -208,7 +215,7 @@ const installFakePerformanceNow = createFakeInstaller(({ at, override, execution
 
 		return {
 			changed: (previousNano, nano) => {
-				fakeNano = fakeNano.add(nano.substract(previousNano))
+				fakeNano = syncNano(fakeNano, previousNano, nano)
 			},
 			fake: getFakePerformanceNow
 		}

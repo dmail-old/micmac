@@ -83,7 +83,11 @@ export const createExecutionHooks = ({ listenMacro, listenMicro, getNano }) => {
 
 		listenMacro(() => {
 			const fakeNano = getNano()
-			ellapsedMs = fakeNano.substract(nano).getMilliseconds()
+			if (nano.lowerThan(fakeNano)) {
+				ellapsedMs = fakeNano.minus(nano).getMilliseconds()
+			} else {
+				ellapsedMs = nano.minus(fakeNano).getMilliseconds()
+			}
 			nano = fakeNano
 			runMacros()
 		})
