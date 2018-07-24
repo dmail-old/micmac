@@ -4,90 +4,99 @@ import Big from "big-js"
 const NANOSECOND_PER_MILLISECOND = 1000000
 const MILLISECOND_PER_SECOND = 1000
 
-export const createNano = (milliseconds = 0, nanoseconds = 0) => {
-	if (typeof milliseconds !== "number") {
-		throw new TypeError(`createNano first arg must be milliseconds, got ${milliseconds}`)
-	}
-	if (milliseconds < 0) {
-		throw new Error(`createNano first arg must be positive milliseconds, got ${milliseconds}`)
-	}
-	if (typeof nanoseconds !== "number") {
-		throw new TypeError(`createNano second arg must be nanoseconds, got ${nanoseconds}`)
-	}
-	if (nanoseconds < 0) {
-		throw new Error(`createNano second arg must be positive nanoseconds, got ${nanoseconds}`)
-	}
+export const createNano = ({ millisecond = 0, nanosecond = 0, ...rest } = {}) => {
+  if (typeof millisecond !== "number") {
+    throw new TypeError(`createNano millisecond must be a number, got ${millisecond}`)
+  }
+  if (millisecond < 0) {
+    throw new Error(`createNano millisecond must be a positive number, got ${millisecond}`)
+  }
+  if (typeof nanosecond !== "number") {
+    throw new TypeError(`createNano nanosecond must be a number, got ${nanosecond}`)
+  }
+  if (nanosecond < 0) {
+    throw new Error(`createNano nanosecond must be a positive number, got ${nanosecond}`)
+  }
+  const extraKeys = Object.keys(rest)
+  if (extraKeys.length > 0) {
+    throw new Error(
+      `createNano expect millisecond and nanosecond property, got unexpected param: ${extraKeys}`,
+    )
+  }
 
-	// just in case someone thinks nanoseconds float are a great idea we round them
-	// because nanoseconds is the most atomic time unit so float makes no sense
-	nanoseconds = parseInt(nanoseconds)
+  // just in case someone thinks nanosecond float are a great idea we round them
+  // because nanosecond is the most atomic time unit so float makes no sense
+  nanosecond = parseInt(nanosecond)
 
-	if (nanoseconds >= NANOSECOND_PER_MILLISECOND) {
-		milliseconds += Math.floor(nanoseconds / NANOSECOND_PER_MILLISECOND)
-		nanoseconds %= NANOSECOND_PER_MILLISECOND
-	}
+  if (nanosecond >= NANOSECOND_PER_MILLISECOND) {
+    millisecond += Math.floor(nanosecond / NANOSECOND_PER_MILLISECOND)
+    nanosecond %= NANOSECOND_PER_MILLISECOND
+  }
 
-	const msAsBig = new Big(milliseconds)
+  const msAsBig = new Big(millisecond)
 
-	const getSeconds = () => Math.floor(msAsBig.div(MILLISECOND_PER_SECOND))
-	const getSecondsFloat = () => parseFloat(msAsBig.div(MILLISECOND_PER_SECOND))
-	const getMilliseconds = () => Math.floor(msAsBig)
-	const getMillisecondsFloat = () => parseFloat(msAsBig.toString())
-	const getNanoseconds = () => nanoseconds
-	const toString = () => `nano(${msAsBig.toString()}, ${nanoseconds})`
-	const valueOf = getMillisecondsFloat
+  const getSecond = () => Math.floor(msAsBig.div(MILLISECOND_PER_SECOND))
+  const getSecondFloat = () => parseFloat(msAsBig.div(MILLISECOND_PER_SECOND))
+  const getMillisecond = () => Math.floor(msAsBig)
+  const getMillisecondFloat = () => parseFloat(msAsBig.toString())
+  const getNanosecond = () => nanosecond
+  const toString = () => `nano(${msAsBig.toString()}, ${nanosecond})`
+  const valueOf = getMillisecondFloat
 
-	const plus = otherNano =>
-		createNano(
-			parseFloat(msAsBig.plus(otherNano.getMillisecondsFloat())),
-			nanoseconds + otherNano.getNanoseconds()
-		)
-	const minus = otherNano =>
-		createNano(
-			parseFloat(msAsBig.minus(otherNano.getMillisecondsFloat())),
-			nanoseconds - otherNano.getNanoseconds()
-		)
-	const compare = otherNano => {
-		const millisecondsFloat = getMillisecondsFloat()
-		const otherMillisecondsFloat = otherNano.getMillisecondsFloat()
-		if (millisecondsFloat < otherMillisecondsFloat) {
-			return -1
-		}
-		if (millisecondsFloat > otherMillisecondsFloat) {
-			return 1
-		}
-		const nanoseconds = getNanoseconds()
-		const otherNanoseconds = otherNano.getNanoseconds()
-		if (nanoseconds < otherNanoseconds) {
-			return -1
-		}
-		if (nanoseconds > otherNanoseconds) {
-			return 1
-		}
-		return 0
-	}
-	const lowerThan = otherNano => compare(otherNano) === -1
-	const greaterThan = otherNano => compare(otherNano) === 1
+  const plus = otherNano =>
+    createNano({
+      millisecond: parseFloat(msAsBig.plus(otherNano.getMillisecondFloat())),
+      nanosecond: nanosecond + otherNano.getNanosecond(),
+    })
+  const minus = otherNano =>
+    createNano({
+      millisecond: parseFloat(msAsBig.minus(otherNano.getMillisecondFloat())),
+      nanosecond: nanosecond - otherNano.getNanosecond(),
+    })
+  const compare = otherNano => {
+    const millisecondFloat = getMillisecondFloat()
+    const otherMillisecondFloat = otherNano.getMillisecondFloat()
+    if (millisecondFloat < otherMillisecondFloat) {
+      return -1
+    }
+    if (millisecondFloat > otherMillisecondFloat) {
+      return 1
+    }
+    const nanosecond = getNanosecond()
+    const otherNanosecond = otherNano.getNanosecond()
+    if (nanosecond < otherNanosecond) {
+      return -1
+    }
+    if (nanosecond > otherNanosecond) {
+      return 1
+    }
+    return 0
+  }
+  const lowerThan = otherNano => compare(otherNano) === -1
+  const greaterThan = otherNano => compare(otherNano) === 1
 
-	return {
-		getSeconds,
-		getSecondsFloat,
-		getMilliseconds,
-		getMillisecondsFloat,
-		getNanoseconds,
+  return {
+    getSecond,
+    getSecondFloat,
+    getMillisecond,
+    getMillisecondFloat,
+    getNanosecond,
 
-		toString,
-		valueOf,
+    toString,
+    valueOf,
 
-		plus,
-		minus,
+    plus,
+    minus,
 
-		compare,
-		lowerThan,
-		greaterThan
-	}
+    compare,
+    lowerThan,
+    greaterThan,
+  }
 }
 
-export const convertSecondsToMilliseconds = seconds => seconds * MILLISECOND_PER_SECOND
+export const convertSecondToMillisecond = second => second * MILLISECOND_PER_SECOND
 
-export const createNanoFromSeconds = seconds => createNano(convertSecondsToMilliseconds(seconds))
+export const createNanoFromSecond = second =>
+  createNano({
+    millisecond: convertSecondToMillisecond(second),
+  })

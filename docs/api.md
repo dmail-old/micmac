@@ -11,13 +11,9 @@ import { mockExecution } from "micmac"
 
 const globalSetTimeout = setTimeout
 mockExecution(() => {
-	if (setTimeout === globaSetTimeout) {
-		throw new Error("setTimeout must be mocked")
-	}
+  setTimeout === globalSetTimeout // false
 })
-if (globalSetTimeout !== setTimeout) {
-	throw new Error("setTimeout must be restored")
-}
+setTimeout === globalSetTimeout // true
 ```
 
 Please note that if fn throws, mockExecution restore features because it wraps fn into
@@ -38,17 +34,13 @@ import { mockExecution } from "micmac"
 const toBeTested = () => Promise.resolve()
 
 mockExecution(({ tick }) => {
-	let called = false
-	toBeTested().then(() => {
-		called = true
-	})
-	if (value) {
-		throw new Error("called must be false because promise.then(fn) calls fn on next event loop")
-	}
-	tick()
-	if (called === false) {
-		throw new Error("called must be true because tick() simulates that an event loop had ellapsed")
-	}
+  let called = false
+  toBeTested().then(() => {
+    called = true
+  })
+  called // false
+  tick()
+  called // true
 })
 ```
 
@@ -60,17 +52,13 @@ import { mockExecution } from "micmac"
 const toBeTested = fn => setTimeout(fn, 10)
 
 mockExecution(({ tick }) => {
-	let called = false
-	toBeTested(() => {
-		called = true
-	})
-	if (called) {
-		throw new Error("called must be false because 10ms are not ellapsed")
-	}
-	tick(10)
-	if (called === false) {
-		throw new Error("called must be true because tick(10) simulates that 10ms had ellapsed")
-	}
+  let called = false
+  toBeTested(() => {
+    called = true
+  })
+  called // false
+  tick(10)
+  called // true
 })
 ```
 
@@ -84,10 +72,8 @@ reuse above example with them.
 import { mockExecution } from "micmac"
 
 mockExecution(({ tick }) => {
-	tick(10)
-	if (Date.now() !== 10) {
-		throw new Error("Date.now() must return 10 because tick(10) simulates 10ms had ellapsed")
-	}
+  tick(10)
+  Date.now() // 10
 })
 ```
 
@@ -97,12 +83,8 @@ mockExecution(({ tick }) => {
 import { mockExecution } from "micmac"
 
 mockExecution(({ tick }) => {
-	tick(10)
-	if (new Date().getTime() !== 10) {
-		throw new Error(
-			"new Date().getTime() must return 10 because tick(10) simulates 10ms had ellapsed"
-		)
-	}
+  tick(10)
+  new Date().getTime() // 10
 })
 ```
 
@@ -112,13 +94,8 @@ mockExecution(({ tick }) => {
 import { mockExecution } from "micmac"
 
 mockExecution(({ tick }) => {
-	tick(1000)
-	const uptime = process.uptime()
-	if (uptime !== 1) {
-		throw new Error(
-			"process.uptime() must return 1 because tick(1000) simulates that 1s had ellapsed"
-		)
-	}
+  tick(1000)
+  process.uptime() // 1
 })
 ```
 
@@ -128,17 +105,7 @@ mockExecution(({ tick }) => {
 import { mockExecution } from "micmac"
 
 mockExecution(({ tick }) => {
-	tick(1000, 100)
-	const [seconds, nanoseconds] = process.hrtime()
-	if (seconds !== 1) {
-		throw new Error(
-			"process.hrtime()[0] must return 1 because tick(1000, 100) simulates that 1s had ellapsed"
-		)
-	}
-	if (nanoseconds !== 100) {
-		throw new Error(
-			"process.hrtime()[1] must return 100 because tick(1000, 100) simulates that 100ns had ellapsed"
-		)
-	}
+  tick(1000, 100)
+  process.hrtime() // [1, 100]
 })
 ```

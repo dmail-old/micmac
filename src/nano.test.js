@@ -1,129 +1,167 @@
 // https://github.com/substack/node-mkdirp/issues/129
 
-import { createNano, createNanoFromSeconds } from "./nano.js"
+import { createNano, createNanoFromSecond } from "./nano.js"
 
 import { createTest } from "@dmail/test"
 import { expectMatch, expectThrowWith, matchTypeErrorWith, matchErrorWith } from "@dmail/expect"
 
 export default createTest({
-	"createNano(null)": () =>
-		expectThrowWith(
-			() => createNano(null),
-			matchTypeErrorWith({
-				message: `createNano first arg must be milliseconds, got null`
-			})
-		),
-	"createNano(-1)": () =>
-		expectThrowWith(
-			() => createNano(-1),
-			matchErrorWith({
-				message: `createNano first arg must be positive milliseconds, got -1`
-			})
-		),
-	"createNano(0, undefined)": () =>
-		expectThrowWith(
-			() => createNano(0, true),
-			matchTypeErrorWith({
-				message: `createNano second arg must be nanoseconds, got true`
-			})
-		),
-	"createNano(0, -2)": () =>
-		expectThrowWith(
-			() => createNano(0, -2),
-			matchErrorWith({
-				message: `createNano second arg must be positive nanoseconds, got -2`
-			})
-		),
+  "createNano(null)": () =>
+    expectThrowWith(
+      () => createNano({ millisecond: null }),
+      matchTypeErrorWith({
+        message: `createNano millisecond must be a number, got null`,
+      }),
+    ),
+  "createNano(-1)": () =>
+    expectThrowWith(
+      () => createNano({ millisecond: -1 }),
+      matchErrorWith({
+        message: `createNano millisecond must be a positive number, got -1`,
+      }),
+    ),
+  "createNano(0, undefined)": () =>
+    expectThrowWith(
+      () =>
+        createNano({
+          millisecond: 0,
+          nanosecond: true,
+        }),
+      matchTypeErrorWith({
+        message: `createNano nanosecond must be a number, got true`,
+      }),
+    ),
+  "createNano(0, -2)": () =>
+    expectThrowWith(
+      () =>
+        createNano({
+          millisecond: 0,
+          nanosecond: -2,
+        }),
+      matchErrorWith({
+        message: `createNano nanosecond must be a positive number, got -2`,
+      }),
+    ),
 
-	"toString()": () => expectMatch(createNano(1.1).toString(), "nano(1.1, 0)"),
+  "toString()": () => expectMatch(createNano({ millisecond: 1.1 }).toString(), "nano(1.1, 0)"),
 
-	"getSeconds() from 1": () => expectMatch(createNano(1).getSeconds(), 0),
-	"getSeconds() from 1000": () => expectMatch(createNano(1000).getSeconds(), 1),
-	"getSeconds() from 1001": () => expectMatch(createNano(1001).getSeconds(), 1),
-	"getSeconds() from 1500": () => expectMatch(createNano(1500).getSeconds(), 1),
-	"getSeconds() from 1900": () => expectMatch(createNano(1900).getSeconds(), 1),
+  "getSecond() from 1": () => expectMatch(createNano({ millisecond: 1 }).getSecond(), 0),
+  "getSecond() from 1000": () => expectMatch(createNano({ millisecond: 1000 }).getSecond(), 1),
+  "getSecond() from 1001": () => expectMatch(createNano({ millisecond: 1001 }).getSecond(), 1),
+  "getSecond() from 1500": () => expectMatch(createNano({ millisecond: 1500 }).getSecond(), 1),
+  "getSecond() from 1900": () => expectMatch(createNano({ millisecond: 1900 }).getSecond(), 1),
 
-	"getSecondsFloat() from 1": () => expectMatch(createNano(1).getSecondsFloat(), 0.001),
-	"getSecondsFloat() from 600": () => expectMatch(createNano(600).getSecondsFloat(), 0.6),
-	"getSecondsFloat() from 1001": () => expectMatch(createNano(1001).getSecondsFloat(), 1.001),
+  "getSecondFloat() from 1": () =>
+    expectMatch(createNano({ millisecond: 1 }).getSecondFloat(), 0.001),
+  "getSecondFloat() from 600": () =>
+    expectMatch(createNano({ millisecond: 600 }).getSecondFloat(), 0.6),
+  "getSecondFloat() from 1001": () =>
+    expectMatch(createNano({ millisecond: 1001 }).getSecondFloat(), 1.001),
 
-	"getMilliseconds() from 1": () => expectMatch(createNano(1).getMilliseconds(), 1),
-	"getMilliseconds() from 1000": () => expectMatch(createNano(1000).getMilliseconds(), 1000),
-	"getMilliseconds() from 1001": () => expectMatch(createNano(1001).getMilliseconds(), 1001),
-	"getMilliseconds() from 1001.1": () => expectMatch(createNano(1001.1).getMilliseconds(), 1001),
-	"getMilliseconds() from 1001.5": () => expectMatch(createNano(1001.5).getMilliseconds(), 1001),
+  "getMillisecond() from 1": () => expectMatch(createNano({ millisecond: 1 }).getMillisecond(), 1),
+  "getMillisecond() from 1000": () =>
+    expectMatch(createNano({ millisecond: 1000 }).getMillisecond(), 1000),
+  "getMillisecond() from 1001": () =>
+    expectMatch(createNano({ millisecond: 1001 }).getMillisecond(), 1001),
+  "getMillisecond() from 1001.1": () =>
+    expectMatch(createNano({ millisecond: 1001.1 }).getMillisecond(), 1001),
+  "getMillisecond() from 1001.5": () =>
+    expectMatch(createNano({ millisecond: 1001.5 }).getMillisecond(), 1001),
 
-	"getMillisecondsFloat() from 1": () => expectMatch(createNano(1).getMillisecondsFloat(), 1),
-	"getMillisecondsFloat() from 1.1": () => expectMatch(createNano(1.1).getMillisecondsFloat(), 1.1),
-	"getMillisecondsFloat() from 1.0001": () =>
-		expectMatch(createNano(1.0001).getMillisecondsFloat(), 1.0001),
+  "getMillisecondFloat() from 1": () =>
+    expectMatch(createNano({ millisecond: 1 }).getMillisecondFloat(), 1),
+  "getMillisecondFloat() from 1.1": () =>
+    expectMatch(createNano({ millisecond: 1.1 }).getMillisecondFloat(), 1.1),
+  "getMillisecondFloat() from 1.0001": () =>
+    expectMatch(createNano({ millisecond: 1.0001 }).getMillisecondFloat(), 1.0001),
 
-	"getNanoseconds() from 1 ": () => expectMatch(createNano(1).getNanoseconds(), 0),
-	"getNanoseconds() from 1,10 ": () => expectMatch(createNano(1, 10).getNanoseconds(), 10),
-	"getNanoseconds() from 1, 1000000": () => expectMatch(createNano(1, 1000000).getNanoseconds(), 0),
-	"getNanoseconds() from 1, 1000001": () => expectMatch(createNano(1, 1000001).getNanoseconds(), 1),
+  "getNanosecond() from 1 ": () => expectMatch(createNano({ millisecond: 1 }).getNanosecond(), 0),
+  "getNanosecond() from 1,10 ": () =>
+    expectMatch(createNano({ millisecond: 1, nansecond: 10 }).getNanosecond(), 10),
+  "getNanosecond() from 1, 1000000": () =>
+    expectMatch(createNano({ millisecond: 1, nanosecond: 1000000 }).getNanosecond(), 0),
+  "getNanosecond() from 1, 1000001": () =>
+    expectMatch(createNano({ millisecond: 1, nanosecond: 1000001 }).getNanosecond(), 1),
 
-	"plus() 1 and 1": () =>
-		expectMatch(
-			createNano(1)
-				.plus(createNano(1))
-				.getMilliseconds(),
-			2
-		),
-	"plus 1,4 and 1,3": () =>
-		expectMatch(
-			createNano(1, 4)
-				.plus(createNano(1, 3))
-				.getNanoseconds(),
-			7
-		),
-	"plus 2000.783 & 100.1": () =>
-		expectMatch(
-			createNano(2000.783)
-				.plus(createNano(100.1))
-				.getMillisecondsFloat(),
-			2100.883
-		),
-	// this is very specific, en fait comme on demande une précision à la seconde
-	// et qu'en entrée on avait une précision de 3 décimale
-	// on augemnte la précision à 3+3 de plus puisqu'il y à 1000ms dans 1ms
-	"toSecondsFloat on plus 2000.783 & 100.1": () =>
-		expectMatch(
-			createNano(2000.783)
-				.plus(createNano(100.1))
-				.getSecondsFloat(),
-			2.100883
-		),
-	"getMilliseconds on diff(2, 1)": () =>
-		expectMatch(
-			createNano(2)
-				.minus(createNano(1))
-				.getMilliseconds(),
-			1
-		),
-	"getNanoSeconds on diff (1, 12), (1,3)": () =>
-		expectMatch(
-			createNano(1, 12)
-				.minus(createNano(1, 3))
-				.getNanoseconds(),
-			9
-		),
-	"createNanoFromSeconds(0).getMilliseconds()": () =>
-		expectMatch(createNanoFromSeconds(0).getMilliseconds(), 0),
-	"createNanoFromSeconds(1).getMilliseconds()": () =>
-		expectMatch(createNanoFromSeconds(1).getMilliseconds(), 1000),
-	"createNanoFromSeconds(1.1).getMilliseconds()": () =>
-		expectMatch(createNanoFromSeconds(1.1).getMilliseconds(), 1100),
-	"createNanoFromSeconds(1.001).getMilliseconds()": () =>
-		expectMatch(createNanoFromSeconds(1.001).getMilliseconds(), 1000), // because js
+  "plus() 1 and 1": () =>
+    expectMatch(
+      createNano({ millisecond: 1 })
+        .plus(createNano({ millisecond: 1 }))
+        .getMillisecond(),
+      2,
+    ),
+  "plus 1,4 and 1,3": () =>
+    expectMatch(
+      createNano({ millisecond: 1, nanosecond: 4 })
+        .plus(createNano({ millisecond: 1, nanosecond: 3 }))
+        .getMillisecond(),
+      7,
+    ),
+  "plus 2000.783 & 100.1": () =>
+    expectMatch(
+      createNano({ millisecond: 2000.783 })
+        .plus(createNano({ millisecon: 100.1 }))
+        .getMillisecondFloat(),
+      2100.883,
+    ),
+  // this is very specific, en fait comme on demande une précision à la seconde
+  // et qu'en entrée on avait une précision de 3 décimale
+  // on augemnte la précision à 3+3 de plus puisqu'il y à 1000ms dans 1ms
+  "toSecondFloat on plus 2000.783 & 100.1": () =>
+    expectMatch(
+      createNano({ millisecond: 2000.783 })
+        .plus(createNano({ millisecond: 100.1 }))
+        .getSecondFloat(),
+      2.100883,
+    ),
+  "getMillisecond on diff(2, 1)": () =>
+    expectMatch(
+      createNano({ millisecond: 2 })
+        .minus(createNano({ millisecond: 1 }))
+        .getMillisecond(),
+      1,
+    ),
+  "getNanoSecond on diff (1, 12), (1,3)": () =>
+    expectMatch(
+      createNano({ millisecond: 1, nanosecond: 12 })
+        .minus(createNano({ millisecond: 1, nanosecond: 3 }))
+        .getNanosecond(),
+      9,
+    ),
+  "createNanoFromSecond(0).getMillisecond()": () =>
+    expectMatch(createNanoFromSecond(0).getMillisecond(), 0),
+  "createNanoFromSecond(1).getMillisecond()": () =>
+    expectMatch(createNanoFromSecond(1).getMillisecond(), 1000),
+  "createNanoFromSecond(1.1).getMillisecond()": () =>
+    expectMatch(createNanoFromSecond(1.1).getMillisecond(), 1100),
+  "createNanoFromSecond(1.001).getMillisecond()": () =>
+    expectMatch(createNanoFromSecond(1.001).getMillisecond(), 1000), // because js
 
-	"compare nano(10) and nano(9)": () => expectMatch(createNano(10).compare(createNano(9)), 1),
-	"compare nano(9) and nano(10)": () => expectMatch(createNano(9).compare(createNano(10)), -1),
-	"compare nano(10) and nano(10)": () => expectMatch(createNano(10).compare(createNano(10)), 0),
-	"compare nano(0, 5) and nano(0, 4)": () =>
-		expectMatch(createNano(0, 5).compare(createNano(0, 4)), 1),
-	"compare nano(0, 4) and nano(0, 5)": () =>
-		expectMatch(createNano(0, 4).compare(createNano(0, 5)), -1),
-	"compare nano(0, 5) and nano(0, 5)": () =>
-		expectMatch(createNano(0, 5).compare(createNano(0, 5)), 0)
+  "compare nano(10) and nano(9)": () =>
+    expectMatch(createNano({ millisecond: 10 }).compare(createNano(9)), 1),
+  "compare nano(9) and nano(10)": () =>
+    expectMatch(createNano({ millisecond: 9 }).compare(createNano(10)), -1),
+  "compare nano(10) and nano(10)": () =>
+    expectMatch(createNano({ millisecond: 10 }).compare(createNano(10)), 0),
+  "compare nano(0, 5) and nano(0, 4)": () =>
+    expectMatch(
+      createNano({ millisecond: 0, nanosecond: 5 }).compare(
+        createNano({ millisecond: 0, nanosecond: 4 }),
+      ),
+      1,
+    ),
+  "compare nano(0, 4) and nano(0, 5)": () =>
+    expectMatch(
+      createNano({ millisecond: 0, nanosecond: 4 }).compare(
+        createNano({ millisecond: 0, nanosecond: 5 }),
+      ),
+      -1,
+    ),
+  "compare nano(0, 5) and nano(0, 5)": () =>
+    expectMatch(
+      createNano({ millisecond: 0, nanosecond: 5 }).compare(
+        createNano({ millisecond: 0, nanosecond: 5 }),
+      ),
+      0,
+    ),
 })
