@@ -26,7 +26,7 @@
 		"@dmail/command": "0.1.1",
 		"@dmail/expect": "2.9.0",
 		"@dmail/prettiest": "1.0.0",
-		"@dmail/shared-config": "1.2.1",
+		"@dmail/shared-config": "6.0.0",
 		"@dmail/spy": "1.0.1",
 		"@dmail/test": "2.2.1",
 		"babel-cli": "7.0.0-beta.0",

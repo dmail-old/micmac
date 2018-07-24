@@ -1,1 +1,1 @@
-module.exports = require("@dmail/shared-config").config("babel", {})
+module.exports = require("@dmail/shared-config/dist/babel.js").config
