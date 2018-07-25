@@ -1,12 +1,16 @@
 export const createToggle = (value = false) => {
   const isOn = () => value
+
   const isOff = () => value === false
+
   const on = () => {
     value = true
   }
+
   const off = () => {
     value = false
   }
+
   return {
     isOn,
     isOff,
@@ -15,19 +19,11 @@ export const createToggle = (value = false) => {
   }
 }
 
-export const composeFunction = (a, b) => (...args) => {
-  a(...args)
-  b(...args)
-}
+export const createPropertyHelpers = (object) => {
+  const hasProperty = (name) => object.hasOwnProperty(name)
 
-export const composeFunctionAndReturnedFunctions = (...fns) => (...args) => {
-  const returnedFns = fns.map(fn => fn(...args))
-  return () => returnedFns.map(returnedFn => returnedFn())
-}
+  const getProperty = (name) => object[name]
 
-export const createPropertyHelpers = object => {
-  const hasProperty = name => object.hasOwnProperty(name)
-  const getProperty = name => object[name]
   const setProperty = (name, value) => {
     const has = hasProperty(name)
     const old = has ? getProperty(name) : undefined
@@ -49,7 +45,12 @@ export const createPropertyHelpers = object => {
   }
 }
 
-export const createFakeInstaller = installer => {
+const composeFunction = (a, b) => (...args) => {
+  a(...args)
+  b(...args)
+}
+
+export const createFakeInstaller = (installer) => {
   const installed = createToggle(false)
 
   return ({ object, executionController }) => {
@@ -57,34 +58,24 @@ export const createFakeInstaller = installer => {
       throw new Error("already installed")
     }
     installed.on()
+
     let restore = () => installed.off()
 
-    const addRestorer = fn => {
+    const addRestorer = (fn) => {
       restore = composeFunction(restore, fn)
     }
+
     const mock = (instruction, where) => {
-      const { fake, changed } = instruction
+      const { fake, controlMethods } = instruction
 
       addRestorer(where.set(where.name, fake))
-      if (changed) {
-        // bon du coup c'est plus complexe que je croyais non?
-        // lorsque je tick() je reçois un nano du temps qu'il est actuellement
-        // lorsque je tickAbsolute même chose
-        // mais cette valeur est relative à un temps local (par défaut 0)
-        // et je veux synchroniser les deux donc en gros lorsque je modifie le temps global
-        // je veux répercuter sur le temps local
-        // il se peut que: je revienne en arrière (ah bon?), je reset, j'avance
-        // hum.... j'ai pas envie d'autoriser à reset/revenir en arrière pour le moment
-        let currentNano = executionController.getNano()
-        executionController.listenNano(() => {
-          const nano = executionController.getNano()
-          const previousNano = currentNano
-          currentNano = nano
-          changed(previousNano, nano)
-        })
+      if (controlMethods) {
+        Object.assign(executionController, controlMethods)
       }
     }
-    const getHowParams = where => where.get(where.name)
+
+    const getHowParams = (where) => where.get(where.name)
+
     const override = (where, how) => {
       if (where === null) {
         return
@@ -92,16 +83,18 @@ export const createFakeInstaller = installer => {
       const instruction = how(getHowParams(where))
       mock(instruction, where)
     }
+
     const composeOverride = (...args) => {
       const how = args.pop()
       const wheres = args
 
-      if (wheres.some(where => where === null)) {
+      if (wheres.some((where) => where === null)) {
         return
       }
-      const instructions = how(...wheres.map(where => getHowParams(where)))
+      const instructions = how(...wheres.map((where) => getHowParams(where)))
       wheres.forEach((where, index) => mock(instructions[index], where))
     }
+
     const at = (...names) => {
       if (names.length === 0) {
         throw new Error("one name expected")
@@ -119,6 +112,7 @@ export const createFakeInstaller = installer => {
         ;({ has, get, set } = createPropertyHelpers(get(name)))
         i++
       }
+
       return {
         has,
         get,
@@ -126,6 +120,7 @@ export const createFakeInstaller = installer => {
         name,
       }
     }
+
     installer({
       at,
       override,
@@ -133,11 +128,12 @@ export const createFakeInstaller = installer => {
       executionController,
       installed,
     })
+
     return restore
   }
 }
 
-export const createSetCancelPairs = fnReturningCancel => {
+export const createSetCancelPairs = (fnReturningCancel) => {
   let previousId = 0
   const cancellerIds = {}
 
@@ -147,11 +143,13 @@ export const createSetCancelPairs = fnReturningCancel => {
     cancellerIds[id] = fnReturningCancel(...args)
     return id
   }
-  const cancel = id => {
+
+  const cancel = (id) => {
     if (id in cancellerIds) {
       cancellerIds[id]()
       delete cancellerIds[id]
     }
   }
+
   return { set, cancel }
 }

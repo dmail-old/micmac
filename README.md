@@ -12,17 +12,13 @@ Mock most native way to execute JavaScript asynchonously to trigger them manuall
 import { mockExecution } from "micmac"
 
 mockExecution(({ tick }) => {
-	let called = false
-	setTimeout(() => {
-		called = true
-	}, 10)
-	if (called) {
-		throw new Error("called must be false because 10ms are not ellapsed")
-	}
-	tick(10)
-	if (called === false) {
-		throw new Error("called must be true because tick(10) simulates that 10ms had ellapsed")
-	}
+  let called = false
+  setTimeout(() => {
+    called = true
+  }, 10)
+  called // false
+  tick(10)
+  called // true
 })
 ```
 

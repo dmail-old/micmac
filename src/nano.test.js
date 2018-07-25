@@ -1,9 +1,8 @@
 // https://github.com/substack/node-mkdirp/issues/129
 
-import { createNano, createNanoFromSecond } from "./nano.js"
-
+import { expectMatch, expectThrowWith, matchErrorWith, matchTypeErrorWith } from "@dmail/expect"
 import { createTest } from "@dmail/test"
-import { expectMatch, expectThrowWith, matchTypeErrorWith, matchErrorWith } from "@dmail/expect"
+import { createNano, createNanoFromSecond } from "./nano.js"
 
 export default createTest({
   "createNano(null)": () =>

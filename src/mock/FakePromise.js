@@ -1,5 +1,5 @@
 const platform = typeof window === "object" ? "browser" : "node"
-const platformPolymorph = platforms => platforms[platform]
+const platformPolymorph = (platforms) => platforms[platform]
 const triggerEvent = platformPolymorph({
   browser: (name, event) => {
     name = `on${name.toLowerCase()}`
@@ -18,14 +18,17 @@ const triggerEvent = platformPolymorph({
     return false
   },
 })
+
 const triggerUnhandled = (value, promise) => {
   if (triggerEvent("onunhandledRejection", { value, promise }) === false) {
     console.log(`possibly unhandled rejection ${value} for ${promise}`)
   }
 }
-const triggerHandled = promise => {
+
+const triggerHandled = (promise) => {
   triggerEvent("rejectionHandled", { promise })
 }
+
 const callThenable = (thenable, onFulfill, onReject) => {
   try {
     const then = thenable.then
@@ -34,12 +37,14 @@ const callThenable = (thenable, onFulfill, onReject) => {
     onReject(e)
   }
 }
-const isThenable = object => {
+
+const isThenable = (object) => {
   if (object) {
     return typeof object.then === "function"
   }
   return false
 }
+
 const once = (fn, ...curriedArgs) => {
   let called = false
   return (...args) => {
@@ -49,12 +54,13 @@ const once = (fn, ...curriedArgs) => {
     }
   }
 }
+
 const noop = () => {}
 
-export const createFakePromise = () => {
-  const settlePromise = promise => {
+export const createFakePromise = ({ microCallback }) => {
+  const settlePromise = (promise) => {
     if (promise.status === "rejected" && promise.handled === false) {
-      setImmediate(() => {
+      microCallback(() => {
         if (!promise.handled) {
           triggerUnhandled(promise.value, promise)
           promise.unhandledTriggered = true
@@ -74,11 +80,13 @@ export const createFakePromise = () => {
       pendingList.length = 0
     }
   }
+
   const rejectPromise = (promise, reason) => {
     promise.status = "rejected"
     promise.value = reason
     settlePromise(promise)
   }
+
   const resolvePromise = (promise, value) => {
     try {
       if (isThenable(value)) {
@@ -100,6 +108,7 @@ export const createFakePromise = () => {
       rejectPromise(promise, e)
     }
   }
+
   const handle = (promise, handler) => {
     // on doit s'inscrire sur la bonne pendingList
     // on finis forcément par tomber sur un thenable en mode 'pending'
@@ -118,7 +127,7 @@ export const createFakePromise = () => {
         promise.pendingList = [handler]
       }
     } else {
-      setImmediate(() => {
+      microCallback(() => {
         let isFulfilled = promise.status === "fulfilled"
         let value = promise.value
         const callback = isFulfilled ? handler.onFulfill : handler.onReject
@@ -192,14 +201,16 @@ export const createFakePromise = () => {
     },
   }
 
-  FakePromise.resolve = value => {
+  FakePromise.resolve = (value) => {
     if (value && value instanceof FakePromise && value.constructor === FakePromise) {
       return value
     }
-    return new FakePromise(resolve => resolve(value))
+    return new FakePromise((resolve) => resolve(value))
   }
-  FakePromise.reject = value => new FakePromise((resolve, reject) => reject(value))
-  FakePromise.all = iterable =>
+
+  FakePromise.reject = (value) => new FakePromise((resolve, reject) => reject(value))
+
+  FakePromise.all = (iterable) =>
     new FakePromise((resolve, reject) => {
       var callCount = 0
       var resolvedCount = 0
@@ -207,7 +218,7 @@ export const createFakePromise = () => {
       const resolveOne = (value, index) => {
         try {
           if (isThenable(value)) {
-            callThenable(value, value => resolveOne(value, index), reject)
+            callThenable(value, (value) => resolveOne(value, index), reject)
           } else {
             values[index] = value
             resolvedCount++
@@ -232,12 +243,13 @@ export const createFakePromise = () => {
         resolve(values)
       }
     })
-  FakePromise.race = iterable =>
+
+  FakePromise.race = (iterable) =>
     new FakePromise((resolve, reject) => {
       for (const thenable of iterable) {
         thenable.then(resolve, reject)
       }
     })
+
   return FakePromise
 }
-export const FakePromise = createFakePromise()

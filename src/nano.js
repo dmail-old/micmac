@@ -1,5 +1,5 @@
 // http://mikemcl.github.io/big.js/
-import Big from "big-js"
+import Big from "big-js/big"
 
 const NANOSECOND_PER_MILLISECOND = 1000000
 const MILLISECOND_PER_SECOND = 1000
@@ -24,8 +24,8 @@ export const createNano = ({ millisecond = 0, nanosecond = 0, ...rest } = {}) =>
     )
   }
 
-  // just in case someone thinks nanosecond float are a great idea we round them
-  // because nanosecond is the most atomic time unit so float makes no sense
+  // nanosecond is the most atomic time unit so floating nanosecond makes no sense.
+  // so we round them using parseInt below
   nanosecond = parseInt(nanosecond)
 
   if (nanosecond >= NANOSECOND_PER_MILLISECOND) {
@@ -36,24 +36,32 @@ export const createNano = ({ millisecond = 0, nanosecond = 0, ...rest } = {}) =>
   const msAsBig = new Big(millisecond)
 
   const getSecond = () => Math.floor(msAsBig.div(MILLISECOND_PER_SECOND))
+
   const getSecondFloat = () => parseFloat(msAsBig.div(MILLISECOND_PER_SECOND))
+
   const getMillisecond = () => Math.floor(msAsBig)
+
   const getMillisecondFloat = () => parseFloat(msAsBig.toString())
+
   const getNanosecond = () => nanosecond
+
   const toString = () => `nano(${msAsBig.toString()}, ${nanosecond})`
+
   const valueOf = getMillisecondFloat
 
-  const plus = otherNano =>
+  const plus = (otherNano) =>
     createNano({
       millisecond: parseFloat(msAsBig.plus(otherNano.getMillisecondFloat())),
       nanosecond: nanosecond + otherNano.getNanosecond(),
     })
-  const minus = otherNano =>
+
+  const minus = (otherNano) =>
     createNano({
       millisecond: parseFloat(msAsBig.minus(otherNano.getMillisecondFloat())),
       nanosecond: nanosecond - otherNano.getNanosecond(),
     })
-  const compare = otherNano => {
+
+  const compare = (otherNano) => {
     const millisecondFloat = getMillisecondFloat()
     const otherMillisecondFloat = otherNano.getMillisecondFloat()
     if (millisecondFloat < otherMillisecondFloat) {
@@ -72,8 +80,9 @@ export const createNano = ({ millisecond = 0, nanosecond = 0, ...rest } = {}) =>
     }
     return 0
   }
-  const lowerThan = otherNano => compare(otherNano) === -1
-  const greaterThan = otherNano => compare(otherNano) === 1
+  const lowerThan = (otherNano) => compare(otherNano) === -1
+
+  const greaterThan = (otherNano) => compare(otherNano) === 1
 
   return {
     getSecond,
@@ -94,9 +103,9 @@ export const createNano = ({ millisecond = 0, nanosecond = 0, ...rest } = {}) =>
   }
 }
 
-export const convertSecondToMillisecond = second => second * MILLISECOND_PER_SECOND
+export const convertSecondToMillisecond = (second) => second * MILLISECOND_PER_SECOND
 
-export const createNanoFromSecond = second =>
+export const createNanoFromSecond = (second) =>
   createNano({
     millisecond: convertSecondToMillisecond(second),
   })

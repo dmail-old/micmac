@@ -1,15 +1,19 @@
-import { FakePromise } from "./FakePromise.js"
-import { createTest } from "@dmail/test"
 import {
   expectFunction,
-  matchProperties,
-  expectResolveWith,
-  expectRejectWith,
-  expectThrowWith,
   expectMatch,
+  expectRejectWith,
+  expectResolveWith,
+  expectThrowWith,
   matchError,
+  matchProperties,
   matchTypeError,
 } from "@dmail/expect"
+import { createTest } from "@dmail/test"
+import { createFakePromise } from "./FakePromise.js"
+
+const FakePromise = createFakePromise({
+  microCallback: (fn) => setTimeout(fn),
+})
 
 export default createTest({
   "is a function": () => expectFunction(FakePromise),
@@ -17,11 +21,11 @@ export default createTest({
   "throw when called without arg": () => expectThrowWith(FakePromise, matchError()),
   "throw a TypeError called with something !== than a function": () =>
     expectThrowWith(() => new FakePromise(true), matchTypeError()),
-  "can resolve": () => expectResolveWith(new FakePromise(resolve => resolve())),
+  "can resolve": () => expectResolveWith(new FakePromise((resolve) => resolve())),
   "FakePromise.resolve().then()": () => expectResolveWith(FakePromise.resolve().then(), undefined),
   "then() on pending promise": () => {
     let resolve
-    const promise = new Promise(res => {
+    const promise = new Promise((res) => {
       resolve = res
     })
     const error = new Error()
@@ -51,7 +55,7 @@ export default createTest({
     ),
   "resolving to itself": () => {
     let resolve
-    const promise = new FakePromise(res => {
+    const promise = new FakePromise((res) => {
       resolve = res
     })
     resolve(promise)
