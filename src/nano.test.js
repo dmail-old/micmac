@@ -76,7 +76,7 @@ export default createTest({
 
   "getNanosecond() from 1 ": () => expectMatch(createNano({ millisecond: 1 }).getNanosecond(), 0),
   "getNanosecond() from 1,10 ": () =>
-    expectMatch(createNano({ millisecond: 1, nansecond: 10 }).getNanosecond(), 10),
+    expectMatch(createNano({ millisecond: 1, nanosecond: 10 }).getNanosecond(), 10),
   "getNanosecond() from 1, 1000000": () =>
     expectMatch(createNano({ millisecond: 1, nanosecond: 1000000 }).getNanosecond(), 0),
   "getNanosecond() from 1, 1000001": () =>
@@ -94,12 +94,12 @@ export default createTest({
       createNano({ millisecond: 1, nanosecond: 4 })
         .plus(createNano({ millisecond: 1, nanosecond: 3 }))
         .getMillisecond(),
-      7,
+      2,
     ),
   "plus 2000.783 & 100.1": () =>
     expectMatch(
       createNano({ millisecond: 2000.783 })
-        .plus(createNano({ millisecon: 100.1 }))
+        .plus(createNano({ millisecond: 100.1 }))
         .getMillisecondFloat(),
       2100.883,
     ),
@@ -137,11 +137,11 @@ export default createTest({
     expectMatch(createNanoFromSecond(1.001).getMillisecond(), 1000), // because js
 
   "compare nano(10) and nano(9)": () =>
-    expectMatch(createNano({ millisecond: 10 }).compare(createNano(9)), 1),
+    expectMatch(createNano({ millisecond: 10 }).compare(createNano({ millisecond: 9 })), 1),
   "compare nano(9) and nano(10)": () =>
-    expectMatch(createNano({ millisecond: 9 }).compare(createNano(10)), -1),
+    expectMatch(createNano({ millisecond: 9 }).compare(createNano({ millisecond: 10 })), -1),
   "compare nano(10) and nano(10)": () =>
-    expectMatch(createNano({ millisecond: 10 }).compare(createNano(10)), 0),
+    expectMatch(createNano({ millisecond: 10 }).compare(createNano({ millisecond: 10 })), 0),
   "compare nano(0, 5) and nano(0, 4)": () =>
     expectMatch(
       createNano({ millisecond: 0, nanosecond: 5 }).compare(

@@ -12,6 +12,7 @@ import {
 } from "@dmail/expect"
 import { createSpy } from "@dmail/spy"
 import { createTest } from "@dmail/test"
+import assert from "assert"
 import { mockExecution } from "./micmac.js"
 
 export default createTest({
@@ -131,19 +132,57 @@ export default createTest({
       )
     })
   },
+  "process.nextTick() nested are immediatly called in order": () => {
+    mockExecution(({ micro }) => {
+      const calls = []
+
+      process.nextTick(() => {
+        calls.push("a")
+        process.nextTick(() => {
+          calls.push("c")
+        })
+      })
+      process.nextTick(() => {
+        calls.push("b")
+      })
+
+      micro()
+      assert.equal(calls.join(), "a,b,c")
+    })
+    return expectMatch(1, 1)
+  },
   "setImmediate()": () => {
-    return mockExecution(({ micro }) => {
+    return mockExecution(({ macro }) => {
       const spy = createSpy()
       setImmediate(spy)
       return expectChain(
         () => expectNotCalled(spy),
-        () => micro(),
+        () => macro(),
         () => expectCalledOnceWithoutArgument(spy),
       )
     })
   },
+  "setImmediate nested awaits next macro call": () => {
+    mockExecution(({ macro }) => {
+      let called = false
+      let nestedCall = false
+      setImmediate(() => {
+        called = true
+        setImmediate(() => {
+          nestedCall = true
+        })
+      })
+      assert.equal(called, false)
+      macro()
+      assert.equal(called, true)
+      assert.equal(nestedCall, false)
+      macro()
+      assert.equal(nestedCall, true)
+    })
+    return expectMatch(1, 1)
+  },
   "clearImmediate()": () => {
-    return mockExecution(({ micro }) => {
+    return mockExecution(({ macro }) => {
       const spy = createSpy()
       const id = setImmediate(spy)
 
@@ -151,7 +190,7 @@ export default createTest({
         () => expectMatch(clearImmediate("foo"), undefined),
         () => {
           clearImmediate(id)
-          micro()
+          macro()
         },
         () => expectNotCalled(spy),
       )
@@ -168,6 +207,17 @@ export default createTest({
       )
     })
   },
+  "setTimeout + tick in the future does call": () => {
+    mockExecution(({ tick }) => {
+      let called = false
+      setTimeout(() => {
+        called = true
+      }, 10)
+      tick(20)
+      assert.equal(called, true)
+    })
+    return expectMatch(1, 1)
+  },
   "clearTimeout cancels a timeout": () => {
     return mockExecution(({ tick }) => {
       const spy = createSpy()
@@ -182,7 +232,7 @@ export default createTest({
       )
     })
   },
-  "setInterval()": () => {
+  "setInterval() with 10": () => {
     return mockExecution(({ tick }) => {
       const spy = createSpy()
       setInterval(spy, 10)
@@ -194,6 +244,67 @@ export default createTest({
         () => expectCalledTwiceWithoutArgument(spy),
       )
     })
+  },
+  "setInterval with 0": () => {
+    mockExecution(({ macro }) => {
+      let callCount = 0
+      setInterval(() => {
+        callCount++
+      })
+      assert.equal(callCount, 0)
+      macro()
+      assert.equal(callCount, 1)
+      macro()
+      assert.equal(callCount, 2)
+    })
+    return expectMatch(1, 1)
+  },
+  "setInterval best effort on interval ms": () => {
+    mockExecution(({ tick }) => {
+      let callCount = 0
+      setInterval(() => {
+        callCount++
+      }, 10)
+
+      assert.equal(callCount, 0)
+      tick(33)
+      assert.equal(callCount, 1)
+      tick(6)
+      assert.equal(callCount, 1)
+      tick(1)
+      assert.equal(callCount, 2)
+    })
+    return expectMatch(1, 1)
+  },
+  "clearInterval called inside callback prevent next execution": () => {
+    mockExecution(({ tick }) => {
+      let callCount = 0
+      const id = setInterval(() => {
+        callCount++
+        clearInterval(id)
+      })
+      assert.equal(callCount, 0)
+      tick()
+      assert.equal(callCount, 1)
+      tick()
+      assert.equal(callCount, 1)
+    })
+    return expectMatch(1, 1)
+  },
+  "clearInterval called outside callback prevent next execution": () => {
+    mockExecution(({ tick }) => {
+      let callCount = 0
+      const id = setInterval(() => {
+        callCount++
+      })
+      assert.equal(callCount, 0)
+      tick()
+      assert.equal(callCount, 1)
+      clearInterval(id)
+      tick()
+      assert.equal(callCount, 1)
+    })
+    return expectMatch(1, 1)
   },
   "clearInterval()": () => {
     return mockExecution(({ tick }) => {
@@ -250,200 +361,3 @@ export default createTest({
     })
   },
 })
-
-// NOTE: ensure what I wanted to test in the tests below
-// is covered here
-/*
-"registerCallback registers a function called when macro is called": () => {
-    const { macro, listenMacro, getNano } = createExecutionController()
-    const { macroCallback } = createExecutionHooks({ listenMacro, getNano })
-    const spy = createSpy()
-
-    macroCallback(spy)
-    return expectChain(
-      () => expectNotCalled(spy),
-      () => macro(),
-      () => expectCalledOnceWithoutArgument(spy),
-      () => macro(),
-      // ensure it's removed after being called
-      () => expectCalledOnceWithoutArgument(spy),
-    )
-  },
-  "macroCallback called during execution registered on next macro": () => {
-    const { macro, listenMacro, getNano } = createExecutionController()
-    const { macroCallback } = createExecutionHooks({ listenMacro, getNano })
-    const spy = createSpy(() => macroCallback(spy))
-
-    macroCallback(spy)
-    return expectChain(
-      () => expectNotCalled(spy),
-      () => macro(),
-      () => expectCalledOnceWithoutArgument(spy),
-      () => macro(),
-      () => expectCalledTwiceWithoutArgument(spy),
-    )
-  },
-  "macroCallback returns a function cancelling registration": () => {
-    const { macro, listenMacro, getNano } = createExecutionController()
-    const { macroCallback } = createExecutionHooks({ listenMacro, getNano })
-    const spy = createSpy()
-
-    const cancel = macroCallback(spy)
-    cancel()
-    macro()
-    return expectNotCalled(spy)
-  },
-  "setMicro registers a function called when micro is called": () => {
-    const { micro, listenMicro, getNano } = createExecutionController()
-    const { setMicro } = createExecutionHooks({ listenMicro, getNano })
-    const spy = createSpy()
-
-    return expectChain(
-      () => setMicro(spy),
-      () => expectNotCalled(spy),
-      () => micro(),
-      () => expectCalledOnceWithoutArgument(spy),
-    )
-  },
-  "microCallback called during execution are executed at the end of current micros": () => {
-    const { micro, listenMicro, getNano } = createExecutionController()
-    const { microCallback } = createExecutionHooks({ listenMicro, getNano })
-    const secondSpy = createSpy()
-    const thirdSpy = createSpy()
-    const firstSpy = createSpy(() => microCallback(thirdSpy))
-
-    microCallback(firstSpy)
-    microCallback(secondSpy)
-    micro()
-    return expectCalledInOrder(firstSpy, secondSpy, thirdSpy)
-  },
-  "microCallback forward args": () => {
-    const { micro, listenMicro, getNano } = createExecutionController()
-    const { microCallback } = createExecutionHooks({ listenMicro, getNano })
-    const spy = createSpy()
-    const args = [0, 1]
-    microCallback(spy, ...args)
-    micro()
-    return expectCalledOnceWith(spy, ...args)
-  },
-  "micros auto called after macros": () => {
-    const { listenMicro, macro, listenMacro, getNano } = createExecutionController()
-    const { microCallback, macroCallback } = createExecutionHooks({
-      listenMicro,
-      listenMacro,
-      getNano,
-    })
-    const microSpy = createSpy()
-    const macroSpy = createSpy()
-
-    microCallback(microSpy)
-    macroCallback(macroSpy)
-    macro()
-    return expectCalledInOrder(macroSpy, microSpy)
-  },
-  "macroCallbackForElapsedMs immediatly calls when delayed by zero": () => {
-    const { tick, listenMacro, getNano } = createExecutionController()
-    const { macroCallbackForElapsedMs } = createExecutionHooks({ listenMacro, getNano })
-    const spy = createSpy()
-
-    macroCallbackForElapsedMs(spy)
-    return expectChain(
-      () => expectNotCalled(spy),
-      () => tick(),
-      () => expectCalledOnceWithoutArgument(spy),
-    )
-  },
-  "ensure late delayed function are called": () => {
-    const { tick, listenMacro, getNano } = createExecutionController()
-    const { macroCallbackForElapsedMs } = createExecutionHooks({ listenMacro, getNano })
-    const spy = createSpy()
-
-    macroCallbackForElapsedMs(spy, 10)
-    tick(20)
-    return expectCalledOnceWithoutArgument(spy)
-  },
-  "can cancel delayed function": () => {
-    const { tick, listenMacro, getNano } = createExecutionController()
-    const { macroCallbackForElapsedMs } = createExecutionHooks({ listenMacro, getNano })
-    const spy = createSpy()
-    const cancel = macroCallbackForElapsedMs(spy)
-    cancel()
-    tick()
-    return expectNotCalled(spy)
-  },
-  "macroCallbackForElapsedMsRecursive auto delay same function in next ideal delayed ms": () => {
-    const { tick, listenMacro, getNano } = createExecutionController()
-    const { macroCallbackForElapsedMsRecursive } = createExecutionHooks({ listenMacro, getNano })
-    const spy = createSpy()
-    macroCallbackForElapsedMsRecursive(spy)
-
-    return expectChain(
-      () => expectNotCalled(spy),
-      () => tick(),
-      () => expectCalledOnceWithoutArgument(spy),
-      () => tick(),
-      () => expectCalledTwiceWithoutArgument(spy),
-    )
-  },
-  "macroCallbackForElapsedMsRecursive forward args": () => {
-    const { macro, listenMacro, getNano } = createExecutionController()
-    const { macroCallbackForElapsedMsRecursive } = createExecutionHooks({ listenMacro, getNano })
-    const spy = createSpy()
-    const args = [0, 1]
-    macroCallbackForElapsedMsRecursive(spy, 0, ...args)
-
-    return expectChain(
-      () => expectNotCalled(spy),
-      () => macro(),
-      () => expectCalledOnceWith(spy, ...args),
-    )
-  },
-  "macroCallbackForElapsedMsRecursive tries to respect intervalMs": () => {
-    const { tick, listenMacro, getNano } = createExecutionController()
-    const { macroCallbackForElapsedMsRecursive } = createExecutionHooks({ listenMacro, getNano })
-    const spy = createSpy()
-    macroCallbackForElapsedMsRecursive(spy, 10)
-
-    return expectChain(
-      () => expectNotCalled(spy),
-      () => tick(33),
-      () => expectCalledOnceWithoutArgument(spy),
-      () => tick(6),
-      () => expectCalledOnceWithoutArgument(spy),
-      () => tick(1),
-      () => expectCalledTwiceWithoutArgument(spy),
-    )
-  },
-  "macroCallbackForElapsedMsRecursive cancelled inside function prevent recursive delay": () => {
-    const { tick, listenMacro, getNano } = createExecutionController()
-    const { macroCallbackForElapsedMsRecursive } = createExecutionHooks({ listenMacro, getNano })
-    let cancel
-    const spy = createSpy(() => {
-      cancel()
-    })
-    cancel = macroCallbackForElapsedMsRecursive(spy)
-    return expectChain(
-      () => expectNotCalled(spy),
-      () => tick(),
-      () => expectCalledOnceWithoutArgument(spy),
-      () => tick(),
-      () => expectCalledOnceWithoutArgument(spy),
-    )
-  },
-  "macroCallbackForElapsedMsRecursive cancelled outside before next tick prevent recursive": () => {
-    const { tick, listenMacro, getNano } = createExecutionController()
-    const { macroCallbackForElapsedMsRecursive } = createExecutionHooks({ listenMacro, getNano })
-    const spy = createSpy()
-    const cancel = macroCallbackForElapsedMsRecursive(spy)
-
-    tick()
-    return expectChain(
-      () => expectCalledOnceWithoutArgument(spy),
-      () => {
-        cancel()
-        tick()
-      },
-      () => expectCalledOnceWithoutArgument(spy),
-    )
-  },
-*/

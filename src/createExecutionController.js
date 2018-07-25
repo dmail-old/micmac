@@ -30,14 +30,15 @@ const createReactionManager = () => {
     return {
       isPending: () => status === "pending",
       isCancelled: () => status === "cancelled",
+      isCancellable: () => status !== "cancelled",
       cancel: () => {
-        if (status !== "pending") {
-          throw new Error(
-            `reaction.cancel must be called while reaction is "pending", reaction is "${status}"`,
-          )
+        if (status === "cancelled") {
+          throw new Error(`reaction.cancel called but reaction is already cancelled`)
+        }
+        if (status === "pending") {
+          remove()
         }
         status = "cancelled"
-        remove()
       },
     }
   }

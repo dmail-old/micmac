@@ -7,7 +7,7 @@ export const createFunctionRegisteringMicroCallback = ({ microVolatileReaction }
     })
 
     return () => {
-      if (reaction.isPending()) {
+      if (reaction.isCancellable()) {
         reaction.cancel()
       }
     }

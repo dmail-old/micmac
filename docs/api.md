@@ -49,7 +49,7 @@ mockExecution(({ tick }) => {
 ```javascript
 import { mockExecution } from "micmac"
 
-const toBeTested = fn => setTimeout(fn, 10)
+const toBeTested = (fn) => setTimeout(fn, 10)
 
 mockExecution(({ tick }) => {
   let called = false

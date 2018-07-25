@@ -5,14 +5,14 @@ export const createFunctionRegisteringDelayedMacroCallback = ({
   macroVolatileReaction,
 }) => {
   return (fn, millisecond = 0, ...args) => {
-    const millisecondExpected = getNano().getMilliSecond() + millisecond
+    const millisecondExpected = getNano().getMillisecond() + millisecond
     const reaction = macroVolatileReaction({
-      condition: () => getNano().getMilliSecond() >= millisecondExpected,
+      condition: () => getNano().getMillisecond() >= millisecondExpected,
       action: () => fn(...args),
     })
 
     return () => {
-      if (reaction.isPending()) {
+      if (reaction.isCancellable()) {
         reaction.cancel()
       }
     }

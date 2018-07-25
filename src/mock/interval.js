@@ -5,37 +5,43 @@ export const createFunctionRegisteringPeriodicMacroCallback = ({
   getNano,
 }) => {
   return (fn, intervalInMillisecond = 0, ...args) => {
-    const millisecondExpected = getNano().getMilliSecond() + intervalInMillisecond
+    const millisecondExpected = getNano().getMillisecond() + intervalInMillisecond
 
     let nextReaction
     const reaction = macroVolatileReaction({
       condition: () => getNano().getMillisecond() >= millisecondExpected,
       action: () => {
         fn(...args)
-
         const registerNextVolatileReaction = () => {
           // Let's take as example that 23 millisecond ellapsed but we expected
           // to be called after 10 millisecond. In that case, the next expected call is at 30 millisecond.
           const millisecondNow = getNano().getMillisecond()
           const millisecondExpected =
-            millisecondNow + intervalInMillisecond - millisecondNow % intervalInMillisecond
+            intervalInMillisecond === 0
+              ? millisecondNow
+              : millisecondNow + intervalInMillisecond - millisecondNow % intervalInMillisecond
 
           nextReaction = macroVolatileReaction({
             condition: () => getNano().getMillisecond() >= millisecondExpected,
             action: () => {
               fn(...args)
-              registerNextVolatileReaction()
+              if (!nextReaction.isCancelled()) {
+                registerNextVolatileReaction()
+              }
             },
           })
         }
-        registerNextVolatileReaction()
+        if (!reaction.isCancelled()) {
+          registerNextVolatileReaction()
+        }
       },
     })
 
     return () => {
-      if (reaction.isPending()) {
+      if (reaction.isCancellable()) {
         reaction.cancel()
-      } else if (nextReaction && nextReaction.isPending()) {
+      }
+      if (nextReaction && nextReaction.isCancellable()) {
         nextReaction.cancel()
       }
     }

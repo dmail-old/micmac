@@ -48,7 +48,7 @@
 		"code-lint": "eslint .",
 		"code-format": "prettiest",
 		"code-list": "prettiest-list",
-		"test-before": "npm run code-lint && npm run code-format && npm run code-compile",
+		"test-before": "npm run code-lint && npm run code-format && npm run code-build",
 		"test-list": "test-list",
 		"test-run": "test-run",
 		"test": "npm run test-before && npm run test-run",
