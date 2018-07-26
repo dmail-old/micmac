@@ -13,12 +13,14 @@ import { mockExecution } from "micmac"
 
 mockExecution(({ tick }) => {
   let called = false
-  setTimeout(() => {
+  new Promise((resolve) => {
+    setTimeout(resolve, 10)
+  }).then(() => {
     called = true
-  }, 10)
-  called // false
+  })
+  called === false // no need to explain why
   tick(10)
-  called // true
+  called === true // thanks to tick(10) above, check documentation to understand why
 })
 ```
 

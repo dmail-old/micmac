@@ -1,6 +1,6 @@
 Examples and explanation about how to use micmac
 
-## mockExecution(fn)
+# mockExecution(fn)
 
 mockExecution mock global features (such as setTimeout) and then calls fn. This way when fn gets
 called, global features are mocked. After fn gets called features are restored to their original
@@ -19,7 +19,41 @@ setTimeout === globalSetTimeout // true
 Please note that if fn throws, mockExecution restore features because it wraps fn into
 `try/finally`.
 
-### mockExecution examples
+## mockExecution controller
+
+mockExecution callback is called with a controller exposing many methods to control execution of your code.
+
+### tick(millisecond = 0, nanosecond = 0)
+
+Optionnaly elapse given millisecond & nanosecond and executes all pending macrotask and microtask.
+
+```javascript
+import { mockExecution } from "micmac"
+
+mockExecution(({ tick })) => {
+  const calls = []
+  // nextTick registers microtask
+  process.nextTick(() => {
+    calls.push('nextTick')
+  })
+
+  // setImmediate registers macrotask
+  setImmediate(() => {
+    calls.push('setImmediate')
+  })
+
+  // setTimeout registers macrotask with a dependency to ellapsed time
+  setTimeout(() => {
+    calls.push('setTimeout')
+  }, 5)
+
+  tick(5)
+
+  calls.join() === 'setImmediate,setTimeout,nextTick'
+})
+```
+
+## mockExecution examples
 
 This section will show many example of how mockExecution is meant to be used. For the brievty of the
 examples some `toBeTested` function are declared inline. In your application you would import it
