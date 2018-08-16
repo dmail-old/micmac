@@ -18,9 +18,9 @@ mockExecution(({ tick }) => {
   }).then(() => {
     called = true
   })
-  called === false // no need to explain why
+  // here called is false, no need to explain why
   tick(10)
-  called === true // thanks to tick(10) above, check documentation to understand why
+  // here called is true thanks to tick(10) above, check documentation to understand why
 })
 ```
 
